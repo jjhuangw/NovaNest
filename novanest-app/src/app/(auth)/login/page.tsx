@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import AuthShell, { buttonClass, inputClass, labelClass } from '@/components/auth/AuthShell'
 
 export default function LoginPage() {
   const [form, setForm] = useState({ email: '', password: '' })
@@ -30,61 +31,42 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-zinc-950 px-4">
-      <div className="w-full max-w-sm space-y-8">
-        <div className="text-center">
-          <h1 className="text-3xl font-black text-white tracking-tight">NovaNest</h1>
-          <p className="text-zinc-400 mt-2 text-sm">打造屬於你的體態</p>
+    <AuthShell image="/images/login.jpg" imageAlt="在木地板上冥想的人" tagline="每一天，都更接近理想的自己。" title="登入帳號">
+      <form onSubmit={handleSubmit} className="space-y-5">
+        <div>
+          <label className={labelClass}>Email</label>
+          <input
+            type="email"
+            required
+            value={form.email}
+            onChange={(e) => setForm({ ...form, email: e.target.value })}
+            className={inputClass}
+          />
+        </div>
+        <div>
+          <label className={labelClass}>密碼</label>
+          <input
+            type="password"
+            required
+            value={form.password}
+            onChange={(e) => setForm({ ...form, password: e.target.value })}
+            className={inputClass}
+          />
         </div>
 
-        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-8 space-y-6">
-          <h2 className="text-lg font-semibold text-white">登入帳號</h2>
+        {error && <p className="border-l-2 border-accent bg-stone px-3 py-2 text-sm text-accent">{error}</p>}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-zinc-300 mb-1.5">Email</label>
-              <input
-                type="email"
-                required
-                value={form.email}
-                onChange={(e) => setForm({ ...form, email: e.target.value })}
-                className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-2.5 text-sm text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-zinc-300 mb-1.5">密碼</label>
-              <input
-                type="password"
-                required
-                value={form.password}
-                onChange={(e) => setForm({ ...form, password: e.target.value })}
-                className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-2.5 text-sm text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-              />
-            </div>
+        <button type="submit" disabled={loading} className={buttonClass}>
+          {loading ? '登入中...' : '登入'}
+        </button>
+      </form>
 
-            {error && (
-              <p className="text-sm text-red-400 bg-red-950/50 border border-red-900 rounded-lg px-3 py-2">
-                {error}
-              </p>
-            )}
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-orange-500 hover:bg-orange-400 text-white rounded-xl py-2.5 text-sm font-semibold disabled:opacity-50 transition-colors"
-            >
-              {loading ? '登入中...' : '登入'}
-            </button>
-          </form>
-
-          <p className="text-sm text-center text-zinc-500">
-            還沒有帳號？{' '}
-            <Link href="/register" className="text-orange-400 hover:text-orange-300 font-medium">
-              立即註冊
-            </Link>
-          </p>
-        </div>
-      </div>
-    </div>
+      <p className="text-sm text-muted">
+        還沒有帳號？{' '}
+        <Link href="/register" className="font-semibold text-foreground underline underline-offset-4">
+          立即註冊
+        </Link>
+      </p>
+    </AuthShell>
   )
 }

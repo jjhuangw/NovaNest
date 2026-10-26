@@ -1,50 +1,54 @@
 import { getSession } from '@/lib/auth/session'
 import { redirect } from 'next/navigation'
+import Image from 'next/image'
 
 export const instant = false
+
+const tiles = [
+  { title: '今日訓練', empty: '尚未設定訓練計劃', image: '/images/training.jpg', alt: '在深蹲架前準備槓鈴的女性' },
+  { title: '今日營養', empty: '尚未記錄飲食', image: '/images/nutrition.jpg', alt: '一碗蔬菜沙拉' },
+  { title: '體態紀錄', empty: '尚未上傳照片', image: '/images/body.jpg', alt: '伸展手臂的女性', position: 'object-[70%_center]' },
+]
 
 export default async function DashboardPage() {
   const session = await getSession()
   if (!session) redirect('/login')
 
   return (
-    <div className="p-6 max-w-5xl mx-auto">
-      <div className="mt-6 mb-8">
-        <h1 className="text-2xl font-bold text-white">歡迎回來，<span className="text-orange-400">{session.username}</span></h1>
-        <p className="text-zinc-400 mt-1 text-sm">繼續你的健身旅程</p>
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 hover:border-zinc-700 transition-colors">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-9 h-9 bg-orange-500/20 rounded-xl flex items-center justify-center">
-              <span className="text-orange-400 text-lg">💪</span>
-            </div>
-            <h2 className="text-sm font-semibold text-zinc-300">今日訓練</h2>
-          </div>
-          <p className="text-zinc-500 text-sm">尚未設定訓練計劃</p>
+    <div>
+      <section className="relative h-[60vh] min-h-[360px] w-full">
+        <Image src="/images/hero.jpg" alt="在窗邊做仰臥起坐的女性" fill priority sizes="100vw" className="object-cover" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/25 to-transparent" />
+        <div className="absolute inset-0 mx-auto flex max-w-6xl flex-col justify-end px-6 pb-12 text-white">
+          <p className="text-xs font-semibold uppercase tracking-[0.3em]">Welcome back</p>
+          <h1 className="mt-3 text-4xl font-bold leading-tight sm:text-6xl">歡迎回來，{session.username}</h1>
+          <p className="mt-3 max-w-md text-base text-white/85">繼續你的健身旅程，今天也動起來。</p>
         </div>
+      </section>
 
-        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 hover:border-zinc-700 transition-colors">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-9 h-9 bg-green-500/20 rounded-xl flex items-center justify-center">
-              <span className="text-green-400 text-lg">🥗</span>
-            </div>
-            <h2 className="text-sm font-semibold text-zinc-300">今日營養</h2>
-          </div>
-          <p className="text-zinc-500 text-sm">尚未記錄飲食</p>
+      <section className="mx-auto max-w-6xl px-6 py-16">
+        <h2 className="text-2xl font-bold sm:text-3xl">從這裡開始</h2>
+        <div className="mt-8 grid grid-cols-1 gap-8 sm:grid-cols-3">
+          {tiles.map((t) => (
+            <article key={t.title} className="group">
+              <div className="relative aspect-[4/3] sm:aspect-[4/5] overflow-hidden bg-stone">
+                <Image
+                  src={t.image}
+                  alt={t.alt}
+                  fill
+                  sizes="(min-width: 640px) 33vw, 100vw"
+                  className={`object-cover ${t.position ?? ''} transition-transform duration-500 group-hover:scale-105`}
+                />
+              </div>
+              <h3 className="mt-4 text-lg font-bold">{t.title}</h3>
+              <p className="mt-1 text-sm text-muted">{t.empty}</p>
+              <span className="mt-3 inline-block text-xs font-semibold uppercase tracking-widest underline underline-offset-4">
+                即將推出
+              </span>
+            </article>
+          ))}
         </div>
-
-        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 hover:border-zinc-700 transition-colors">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-9 h-9 bg-blue-500/20 rounded-xl flex items-center justify-center">
-              <span className="text-blue-400 text-lg">📸</span>
-            </div>
-            <h2 className="text-sm font-semibold text-zinc-300">體態紀錄</h2>
-          </div>
-          <p className="text-zinc-500 text-sm">尚未上傳照片</p>
-        </div>
-      </div>
+      </section>
     </div>
   )
 }

@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import AuthShell, { buttonClass, inputClass, labelClass } from '@/components/auth/AuthShell'
 
 export default function RegisterPage() {
   const [form, setForm] = useState({ username: '', email: '', password: '' })
@@ -30,73 +31,54 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-zinc-950 px-4">
-      <div className="w-full max-w-sm space-y-8">
-        <div className="text-center">
-          <h1 className="text-3xl font-black text-white tracking-tight">NovaNest</h1>
-          <p className="text-zinc-400 mt-2 text-sm">打造屬於你的體態</p>
+    <AuthShell image="/images/register.jpg" imageAlt="在瑜珈墊上做樹式的女性" tagline="打造屬於你的體態。" title="建立帳號">
+      <form onSubmit={handleSubmit} className="space-y-5">
+        <div>
+          <label className={labelClass}>使用者名稱</label>
+          <input
+            type="text"
+            required
+            value={form.username}
+            onChange={(e) => setForm({ ...form, username: e.target.value })}
+            placeholder="英數字與底線"
+            className={inputClass}
+          />
+        </div>
+        <div>
+          <label className={labelClass}>Email</label>
+          <input
+            type="email"
+            required
+            value={form.email}
+            onChange={(e) => setForm({ ...form, email: e.target.value })}
+            className={inputClass}
+          />
+        </div>
+        <div>
+          <label className={labelClass}>密碼（至少 8 字元）</label>
+          <input
+            type="password"
+            required
+            minLength={8}
+            value={form.password}
+            onChange={(e) => setForm({ ...form, password: e.target.value })}
+            className={inputClass}
+          />
         </div>
 
-        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-8 space-y-6">
-          <h2 className="text-lg font-semibold text-white">建立帳號</h2>
+        {error && <p className="border-l-2 border-accent bg-stone px-3 py-2 text-sm text-accent">{error}</p>}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-zinc-300 mb-1.5">使用者名稱</label>
-              <input
-                type="text"
-                required
-                value={form.username}
-                onChange={(e) => setForm({ ...form, username: e.target.value })}
-                placeholder="英數字與底線"
-                className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-2.5 text-sm text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-zinc-300 mb-1.5">Email</label>
-              <input
-                type="email"
-                required
-                value={form.email}
-                onChange={(e) => setForm({ ...form, email: e.target.value })}
-                className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-2.5 text-sm text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-zinc-300 mb-1.5">密碼（至少 8 字元）</label>
-              <input
-                type="password"
-                required
-                minLength={8}
-                value={form.password}
-                onChange={(e) => setForm({ ...form, password: e.target.value })}
-                className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-2.5 text-sm text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-              />
-            </div>
+        <button type="submit" disabled={loading} className={buttonClass}>
+          {loading ? '註冊中...' : '建立帳號'}
+        </button>
+      </form>
 
-            {error && (
-              <p className="text-sm text-red-400 bg-red-950/50 border border-red-900 rounded-lg px-3 py-2">
-                {error}
-              </p>
-            )}
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-orange-500 hover:bg-orange-400 text-white rounded-xl py-2.5 text-sm font-semibold disabled:opacity-50 transition-colors"
-            >
-              {loading ? '註冊中...' : '建立帳號'}
-            </button>
-          </form>
-
-          <p className="text-sm text-center text-zinc-500">
-            已有帳號？{' '}
-            <Link href="/login" className="text-orange-400 hover:text-orange-300 font-medium">
-              登入
-            </Link>
-          </p>
-        </div>
-      </div>
-    </div>
+      <p className="text-sm text-muted">
+        已有帳號？{' '}
+        <Link href="/login" className="font-semibold text-foreground underline underline-offset-4">
+          登入
+        </Link>
+      </p>
+    </AuthShell>
   )
 }

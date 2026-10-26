@@ -9,7 +9,7 @@ export default function LogoutButton() {
   return (
     <button
       onClick={handleLogout}
-      className="text-sm text-zinc-500 hover:text-red-400 transition-colors"
+      className="text-sm text-muted underline-offset-4 transition-colors hover:text-foreground hover:underline"
     >
       登出
     </button>
