@@ -2,6 +2,7 @@ import { and, asc, between, eq, min, sql } from 'drizzle-orm'
 import { db } from '@/lib/db/client'
 import { setLogs, workoutLogs } from '@/lib/db/schema'
 import type { LoggedDay } from './completion'
+import type { SetCounts } from './muscles'
 
 export interface LoggedSet {
   exerciseIndex: number
@@ -50,6 +51,26 @@ export async function getLoggedDays(userId: string, from: string, to: string): P
     .groupBy(workoutLogs.id)
 
   return new Map(rows.map((r) => [r.date, { plannedSets: r.plannedSets, completedSets: r.completedSets }]))
+}
+
+export async function getSetCounts(userId: string, from: string, to: string): Promise<SetCounts> {
+  const rows = await db
+    .select({
+      date: workoutLogs.date,
+      exerciseName: setLogs.exerciseName,
+      sets: sql<number>`count(*)::int`,
+    })
+    .from(setLogs)
+    .innerJoin(workoutLogs, eq(setLogs.workoutLogId, workoutLogs.id))
+    .where(and(eq(workoutLogs.userId, userId), between(workoutLogs.date, from, to)))
+    .groupBy(workoutLogs.date, setLogs.exerciseName)
+
+  const counts: SetCounts = new Map()
+  for (const r of rows) {
+    if (!counts.has(r.date)) counts.set(r.date, new Map())
+    counts.get(r.date)!.set(r.exerciseName, r.sets)
+  }
+  return counts
 }
 
 export async function getFirstLogDate(userId: string): Promise<string | null> {

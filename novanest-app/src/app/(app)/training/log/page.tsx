@@ -13,10 +13,12 @@ import {
   todayISO,
   weekStart,
 } from '@/lib/training/dates'
-import { getFirstLogDate, getLoggedDays, getWorkoutLog } from '@/lib/training/logs'
+import { getFirstLogDate, getLoggedDays, getSetCounts, getWorkoutLog } from '@/lib/training/logs'
+import { computeMuscleVolume } from '@/lib/training/muscles'
 import { DAY_KEYS, DAY_LABELS, formatVolume, mockPlan } from '@/lib/training/plan'
 import { saveWorkoutLogAction } from './actions'
 import { SavedToast, SubmitButton } from './form-feedback'
+import MuscleMap from './muscle-map'
 import { RestButton, RestTimerProvider } from './rest-timer'
 
 export const instant = false
@@ -35,10 +37,11 @@ export default async function TrainingLogPage(props: PageProps<'/training/log'>)
 
   const week = { from: weekStart(date), to: addDays(weekStart(date), 6) }
   const month = { from: monthStart(date), to: monthEnd(date) }
-  const [logged, log, firstLogDate] = await Promise.all([
+  const [logged, log, firstLogDate, weekSetCounts] = await Promise.all([
     getLoggedDays(session.userId, week.from < month.from ? week.from : month.from, week.to > month.to ? week.to : month.to),
     getWorkoutLog(session.userId, date),
     getFirstLogDate(session.userId),
+    getSetCounts(session.userId, week.from, week.to),
   ])
 
   // 還沒有任何紀錄時，從今天開始算
@@ -46,6 +49,7 @@ export default async function TrainingLogPage(props: PageProps<'/training/log'>)
   const weekStats = computeCompletion(plan, week, trackingStart, today, logged)
   const monthStats = computeCompletion(plan, month, trackingStart, today, logged)
   const dayStats = monthStats.days.find((d) => d.date === date)!
+  const muscleVolumes = computeMuscleVolume(plan, weekStats.days, weekSetCounts)
 
   const setValue = (exerciseIndex: number, setNumber: number) =>
     log?.sets.find((s) => s.exerciseIndex === exerciseIndex && s.setNumber === setNumber)
@@ -101,6 +105,8 @@ export default async function TrainingLogPage(props: PageProps<'/training/log'>)
             <Legend className="border border-accent" label="未訓練" />
             <Legend className="border border-line" label="休息／未開始／未來" />
           </ul>
+
+          <MuscleMap volumes={muscleVolumes} weekLabel={`${formatDate(week.from)}–${formatDate(week.to)} 這週`} />
         </section>
 
         <section aria-labelledby="log-heading">

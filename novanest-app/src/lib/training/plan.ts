@@ -13,6 +13,21 @@ export const DAY_LABELS: Record<DayKey, string> = {
   sun: '週日',
 }
 
+export const MUSCLES = ['chest', 'shoulders', 'back', 'biceps', 'triceps', 'core', 'quads', 'posterior', 'calves'] as const
+export type Muscle = (typeof MUSCLES)[number]
+
+export const MUSCLE_LABELS: Record<Muscle, string> = {
+  chest: '胸',
+  shoulders: '肩',
+  back: '背',
+  biceps: '二頭',
+  triceps: '三頭',
+  core: '核心',
+  quads: '股四頭',
+  posterior: '臀・腿後側',
+  calves: '小腿',
+}
+
 export interface Exercise {
   name: string
   sets: number
@@ -20,6 +35,8 @@ export interface Exercise {
   perSide?: boolean
   // 組間休息秒數：複合動作 90–150 秒、孤立動作 45–75 秒
   restSeconds: number
+  // 每組對各肌群的計數：主要肌群 1、次要肌群 0.5
+  muscles: Partial<Record<Muscle, number>>
 }
 
 export interface TrainingDay {
@@ -73,11 +90,11 @@ export const mockPlan: TrainingPlan = {
       day: 'mon',
       title: '胸＋側肩＋三頭',
       exercises: [
-        { name: '上斜啞鈴臥推', sets: 4, reps: '6–10', restSeconds: 120 },
-        { name: '胸推機', sets: 3, reps: '8–12', restSeconds: 120 },
-        { name: '啞鈴側平舉', sets: 3, reps: '12–20', restSeconds: 60 },
-        { name: '低位至高位滑輪夾胸', sets: 2, reps: '12–15', restSeconds: 60 },
-        { name: '三頭繩索下壓', sets: 2, reps: '10–15', restSeconds: 60 },
+        { name: '上斜啞鈴臥推', sets: 4, reps: '6–10', restSeconds: 120, muscles: { chest: 1, shoulders: 0.5, triceps: 0.5 } },
+        { name: '胸推機', sets: 3, reps: '8–12', restSeconds: 120, muscles: { chest: 1, shoulders: 0.5, triceps: 0.5 } },
+        { name: '啞鈴側平舉', sets: 3, reps: '12–20', restSeconds: 60, muscles: { shoulders: 1 } },
+        { name: '低位至高位滑輪夾胸', sets: 2, reps: '12–15', restSeconds: 60, muscles: { chest: 1 } },
+        { name: '三頭繩索下壓', sets: 2, reps: '10–15', restSeconds: 60, muscles: { triceps: 1 } },
       ],
       notes: [
         '上斜椅角度約 20–30 度。',
@@ -89,11 +106,11 @@ export const mockPlan: TrainingPlan = {
       day: 'tue',
       title: '背＋後肩＋二頭',
       exercises: [
-        { name: '高位下拉', sets: 4, reps: '8–12', restSeconds: 120 },
-        { name: '坐姿划船', sets: 3, reps: '8–12', restSeconds: 120 },
-        { name: '單手啞鈴划船', sets: 2, reps: '10–12', perSide: true, restSeconds: 90 },
-        { name: '胸靠反向飛鳥', sets: 3, reps: '12–15', restSeconds: 60 },
-        { name: '啞鈴彎舉', sets: 3, reps: '10–12', restSeconds: 60 },
+        { name: '高位下拉', sets: 4, reps: '8–12', restSeconds: 120, muscles: { back: 1, biceps: 0.5 } },
+        { name: '坐姿划船', sets: 3, reps: '8–12', restSeconds: 120, muscles: { back: 1, biceps: 0.5 } },
+        { name: '單手啞鈴划船', sets: 2, reps: '10–12', perSide: true, restSeconds: 90, muscles: { back: 1, biceps: 0.5 } },
+        { name: '胸靠反向飛鳥', sets: 3, reps: '12–15', restSeconds: 60, muscles: { shoulders: 1, back: 0.5 } },
+        { name: '啞鈴彎舉', sets: 3, reps: '10–12', restSeconds: 60, muscles: { biceps: 1 } },
       ],
       notes: [
         '下拉時手肘往身體兩側及下方移動。',
@@ -105,11 +122,11 @@ export const mockPlan: TrainingPlan = {
       day: 'wed',
       title: '肩膀重點',
       exercises: [
-        { name: '啞鈴肩推', sets: 3, reps: '8–10', restSeconds: 120 },
-        { name: '啞鈴側平舉', sets: 4, reps: '12–20', restSeconds: 60 },
-        { name: '反向飛鳥', sets: 3, reps: '12–15', restSeconds: 60 },
-        { name: '上斜胸推機', sets: 3, reps: '8–12', restSeconds: 120 },
-        { name: '繩索面拉', sets: 2, reps: '12–15', restSeconds: 60 },
+        { name: '啞鈴肩推', sets: 3, reps: '8–10', restSeconds: 120, muscles: { shoulders: 1, triceps: 0.5 } },
+        { name: '啞鈴側平舉', sets: 4, reps: '12–20', restSeconds: 60, muscles: { shoulders: 1 } },
+        { name: '反向飛鳥', sets: 3, reps: '12–15', restSeconds: 60, muscles: { shoulders: 1, back: 0.5 } },
+        { name: '上斜胸推機', sets: 3, reps: '8–12', restSeconds: 120, muscles: { chest: 1, shoulders: 0.5, triceps: 0.5 } },
+        { name: '繩索面拉', sets: 2, reps: '12–15', restSeconds: 60, muscles: { shoulders: 1, back: 0.5 } },
       ],
       notes: [
         '側平舉是肩膀視覺寬度的重點。',
@@ -121,12 +138,12 @@ export const mockPlan: TrainingPlan = {
       day: 'thu',
       title: '胸背＋手臂',
       exercises: [
-        { name: '上斜胸推', sets: 3, reps: '8–12', restSeconds: 120 },
-        { name: '高位下拉', sets: 3, reps: '8–12', restSeconds: 120 },
-        { name: '胸推機', sets: 2, reps: '10–12', restSeconds: 120 },
-        { name: '坐姿划船', sets: 2, reps: '10–12', restSeconds: 120 },
-        { name: '二頭彎舉', sets: 2, reps: '10–15', restSeconds: 60 },
-        { name: '三頭繩索下壓', sets: 2, reps: '10–15', restSeconds: 60 },
+        { name: '上斜胸推', sets: 3, reps: '8–12', restSeconds: 120, muscles: { chest: 1, shoulders: 0.5, triceps: 0.5 } },
+        { name: '高位下拉', sets: 3, reps: '8–12', restSeconds: 120, muscles: { back: 1, biceps: 0.5 } },
+        { name: '胸推機', sets: 2, reps: '10–12', restSeconds: 120, muscles: { chest: 1, shoulders: 0.5, triceps: 0.5 } },
+        { name: '坐姿划船', sets: 2, reps: '10–12', restSeconds: 120, muscles: { back: 1, biceps: 0.5 } },
+        { name: '二頭彎舉', sets: 2, reps: '10–15', restSeconds: 60, muscles: { biceps: 1 } },
+        { name: '三頭繩索下壓', sets: 2, reps: '10–15', restSeconds: 60, muscles: { triceps: 1 } },
       ],
       notes: [
         '胸與背交替進行，可節省時間。',
@@ -144,13 +161,13 @@ export const mockPlan: TrainingPlan = {
       day: 'sat',
       title: '腿部＋核心',
       exercises: [
-        { name: '深蹲或 Smith 深蹲', sets: 3, reps: '6–10', restSeconds: 150 },
-        { name: '羅馬尼亞硬舉', sets: 3, reps: '8–10', restSeconds: 150 },
-        { name: '腿推機', sets: 3, reps: '10–12', restSeconds: 120 },
-        { name: '腿彎舉', sets: 3, reps: '10–15', restSeconds: 60 },
-        { name: '腿伸展', sets: 2, reps: '12–15', restSeconds: 60 },
-        { name: '小腿提踵', sets: 3, reps: '12–20', restSeconds: 60 },
-        { name: '腹部訓練', sets: 3, reps: '12–15', restSeconds: 60 },
+        { name: '深蹲或 Smith 深蹲', sets: 3, reps: '6–10', restSeconds: 150, muscles: { quads: 1, posterior: 0.5, core: 0.5 } },
+        { name: '羅馬尼亞硬舉', sets: 3, reps: '8–10', restSeconds: 150, muscles: { posterior: 1, back: 0.5 } },
+        { name: '腿推機', sets: 3, reps: '10–12', restSeconds: 120, muscles: { quads: 1, posterior: 0.5 } },
+        { name: '腿彎舉', sets: 3, reps: '10–15', restSeconds: 60, muscles: { posterior: 1 } },
+        { name: '腿伸展', sets: 2, reps: '12–15', restSeconds: 60, muscles: { quads: 1 } },
+        { name: '小腿提踵', sets: 3, reps: '12–20', restSeconds: 60, muscles: { calves: 1 } },
+        { name: '腹部訓練', sets: 3, reps: '12–15', restSeconds: 60, muscles: { core: 1 } },
       ],
       notes: [
         '深蹲與羅馬尼亞硬舉優先維持標準姿勢。',
