@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { connection } from 'next/server'
 import { DAY_KEYS, DAY_LABELS, formatVolume, isDayKey, mockPlan } from '@/lib/training/plan'
 import { todayKey } from '@/lib/training/dates'
 
@@ -6,6 +7,8 @@ export const instant = false
 
 export default async function TrainingPage(props: PageProps<'/training'>) {
   const { day } = await props.searchParams
+  // 「今天」必須依每次請求計算，不能在預先渲染時決定
+  await connection()
   const today = todayKey()
   const selected = isDayKey(day) ? day : today
   const plan = mockPlan

@@ -50,5 +50,5 @@ export async function saveWorkoutLogAction(formData: FormData) {
     sets,
   })
 
-  redirect(`/training/log?date=${date}&saved=1`)
+  redirect(`/training/log?date=${date}&saved=${Date.now()}`)
 }

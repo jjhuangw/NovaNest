@@ -16,6 +16,7 @@ import {
 import { getFirstLogDate, getLoggedDays, getWorkoutLog } from '@/lib/training/logs'
 import { DAY_KEYS, DAY_LABELS, formatVolume, mockPlan } from '@/lib/training/plan'
 import { saveWorkoutLogAction } from './actions'
+import { SavedToast, SubmitButton } from './form-feedback'
 
 export const instant = false
 
@@ -26,7 +27,7 @@ export default async function TrainingLogPage(props: PageProps<'/training/log'>)
   const params = await props.searchParams
   const today = todayISO()
   const date = isISODate(params.date) ? params.date : today
-  const saved = params.saved === '1'
+  const savedAt = typeof params.saved === 'string' ? params.saved : null
 
   const plan = mockPlan
   const day = plan.days.find((d) => d.day === dayKeyOf(date))!
@@ -121,10 +122,12 @@ export default async function TrainingLogPage(props: PageProps<'/training/log'>)
             </nav>
           </div>
 
-          {saved && (
-            <p role="status" className="mt-6 border-l-2 border-foreground bg-stone px-4 py-3 text-sm font-semibold">
-              已儲存 {formatDate(date)} 的訓練紀錄。
-            </p>
+          {savedAt && (
+            <SavedToast
+              key={savedAt}
+              savedAt={savedAt}
+              message={`已儲存 ${formatDate(date)} 的訓練紀錄・${dayStats.completedSets} / ${dayStats.plannedSets} 組（${formatRate(dayStats.rate)}）`}
+            />
           )}
 
           {day.exercises.length === 0 ? (
@@ -132,7 +135,8 @@ export default async function TrainingLogPage(props: PageProps<'/training/log'>)
           ) : date > today ? (
             <p className="mt-6 bg-stone px-6 py-10 text-center text-muted">還不能登記未來的訓練。</p>
           ) : (
-            <form action={saveWorkoutLogAction} className="mt-6">
+            // key：切換日期時重新掛載，讓 defaultValue 換成該日期的紀錄
+            <form key={date} action={saveWorkoutLogAction} className="mt-6">
               <input type="hidden" name="date" value={date} />
               <p className="text-sm">
                 已完成 <span className="font-bold tabular-nums">{dayStats.completedSets}</span> / {dayStats.plannedSets} 組・
@@ -176,12 +180,7 @@ export default async function TrainingLogPage(props: PageProps<'/training/log'>)
                 />
               </label>
 
-              <button
-                type="submit"
-                className="mt-6 w-full bg-foreground py-3.5 text-sm font-semibold uppercase tracking-widest text-white transition-opacity hover:opacity-85 sm:w-auto sm:px-12"
-              >
-                儲存紀錄
-              </button>
+              <SubmitButton />
             </form>
           )}
         </section>
