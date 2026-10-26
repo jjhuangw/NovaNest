@@ -2,7 +2,10 @@ import { getSession } from '@/lib/auth/session'
 import { redirect } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
-import { DAY_LABELS, mockPlan, todayKey } from '@/lib/training/plan'
+import { DAY_LABELS, mockPlan } from '@/lib/training/plan'
+import { addDays, todayISO, todayKey, weekStart } from '@/lib/training/dates'
+import { computeCompletion, formatRate } from '@/lib/training/completion'
+import { getFirstLogDate, getLoggedDays } from '@/lib/training/logs'
 
 export const instant = false
 
@@ -18,6 +21,13 @@ export default async function DashboardPage() {
   if (!session) redirect('/login')
 
   const today = mockPlan.days.find((d) => d.day === todayKey())!
+  const todayDate = todayISO()
+  const week = { from: weekStart(todayDate), to: addDays(weekStart(todayDate), 6) }
+  const [logged, firstLogDate] = await Promise.all([
+    getLoggedDays(session.userId, week.from, week.to),
+    getFirstLogDate(session.userId),
+  ])
+  const weekStats = computeCompletion(mockPlan, week, firstLogDate ?? todayDate, todayDate, logged)
   const trainingTile: Tile = {
     title: '今日訓練',
     subtitle:
@@ -26,8 +36,8 @@ export default async function DashboardPage() {
         : `${DAY_LABELS[today.day]}・休息日`,
     image: '/images/training.jpg',
     alt: '在深蹲架前準備槓鈴的女性',
-    href: '/training',
-    cta: '查看課表',
+    href: '/training/log',
+    cta: `本週達成率 ${formatRate(weekStats.rate)}・前往登記`,
   }
 
   return (

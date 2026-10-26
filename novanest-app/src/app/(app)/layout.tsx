@@ -19,11 +19,14 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           <span className="h-3 w-3 rounded-full bg-accent" />
           <span className="text-lg font-black uppercase tracking-[0.2em]">NovaNest</span>
         </Link>
-        <div className="flex items-center gap-6 text-sm">
+        <div className="flex items-center gap-4 text-sm sm:gap-6">
           <Link href="/training" className="font-semibold underline-offset-4 hover:underline">
-            訓練課表
+            課表
           </Link>
-          <span className="font-semibold">{session.username}</span>
+          <Link href="/training/log" className="font-semibold underline-offset-4 hover:underline">
+            紀錄
+          </Link>
+          <span className="hidden font-semibold sm:inline">{session.username}</span>
           <LogoutButton />
         </div>
       </nav>

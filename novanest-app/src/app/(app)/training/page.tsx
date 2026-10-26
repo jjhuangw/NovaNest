@@ -1,5 +1,6 @@
 import Link from 'next/link'
-import { DAY_KEYS, DAY_LABELS, formatVolume, isDayKey, mockPlan, todayKey } from '@/lib/training/plan'
+import { DAY_KEYS, DAY_LABELS, formatVolume, isDayKey, mockPlan } from '@/lib/training/plan'
+import { todayKey } from '@/lib/training/dates'
 
 export const instant = false
 
@@ -62,9 +63,19 @@ export default async function TrainingPage(props: PageProps<'/training'>) {
 
         <div className="mt-10 grid gap-10 lg:grid-cols-[2fr_1fr]">
           <div>
-            <h2 className="text-2xl font-bold">
-              {DAY_LABELS[current.day]}・{current.title}
-            </h2>
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <h2 className="text-2xl font-bold">
+                {DAY_LABELS[current.day]}・{current.title}
+              </h2>
+              {!isRest && (
+                <Link
+                  href="/training/log"
+                  className="bg-foreground px-6 py-3 text-xs font-semibold uppercase tracking-widest text-white transition-opacity hover:opacity-85"
+                >
+                  登記今天的訓練
+                </Link>
+              )}
+            </div>
             {isRest ? (
               <p className="mt-6 bg-stone px-6 py-10 text-center text-muted">休息日，好好恢復。</p>
             ) : (

@@ -49,11 +49,6 @@ export function isDayKey(value: unknown): value is DayKey {
   return typeof value === 'string' && (DAY_KEYS as readonly string[]).includes(value)
 }
 
-export function todayKey(timeZone = 'Asia/Taipei'): DayKey {
-  const weekday = new Intl.DateTimeFormat('en-US', { weekday: 'short', timeZone }).format(new Date())
-  return weekday.toLowerCase() as DayKey
-}
-
 export function formatVolume(e: Exercise): string {
   return `${e.sets} 組 × ${e.reps} 下${e.perSide ? '／側' : ''}`
 }
