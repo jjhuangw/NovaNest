@@ -17,6 +17,7 @@ import { getFirstLogDate, getLoggedDays, getWorkoutLog } from '@/lib/training/lo
 import { DAY_KEYS, DAY_LABELS, formatVolume, mockPlan } from '@/lib/training/plan'
 import { saveWorkoutLogAction } from './actions'
 import { SavedToast, SubmitButton } from './form-feedback'
+import { RestButton, RestTimerProvider } from './rest-timer'
 
 export const instant = false
 
@@ -135,53 +136,58 @@ export default async function TrainingLogPage(props: PageProps<'/training/log'>)
           ) : date > today ? (
             <p className="mt-6 bg-stone px-6 py-10 text-center text-muted">還不能登記未來的訓練。</p>
           ) : (
-            // key：切換日期時重新掛載，讓 defaultValue 換成該日期的紀錄
-            <form key={date} action={saveWorkoutLogAction} className="mt-6">
-              <input type="hidden" name="date" value={date} />
-              <p className="text-sm">
-                已完成 <span className="font-bold tabular-nums">{dayStats.completedSets}</span> / {dayStats.plannedSets} 組・
-                <span className="font-bold">{formatRate(dayStats.rate)}</span>
-              </p>
+            <RestTimerProvider>
+              {/* key：切換日期時重新掛載，讓 defaultValue 換成該日期的紀錄 */}
+              <form key={date} action={saveWorkoutLogAction} className="mt-6 pb-28">
+                <input type="hidden" name="date" value={date} />
+                <p className="text-sm">
+                  已完成 <span className="font-bold tabular-nums">{dayStats.completedSets}</span> / {dayStats.plannedSets} 組・
+                  <span className="font-bold">{formatRate(dayStats.rate)}</span>
+                </p>
 
-              <ol className="mt-6 space-y-8">
-                {day.exercises.map((e, i) => (
-                  <li key={e.name}>
-                    <div className="flex items-baseline justify-between gap-4 border-b border-foreground pb-2">
-                      <h3 className="font-bold">
-                        <span className="mr-3 text-sm text-muted">{String(i + 1).padStart(2, '0')}</span>
-                        {e.name}
-                      </h3>
-                      <span className="shrink-0 text-sm text-muted">{formatVolume(e)}</span>
-                    </div>
-                    <div className="mt-2 grid grid-cols-[3.5rem_1fr_1fr] items-center gap-x-3 gap-y-2 text-sm">
-                      <span />
-                      <span className="text-xs text-muted">重量（kg）</span>
-                      <span className="text-xs text-muted">次數</span>
-                      {Array.from({ length: e.sets }, (_, s) => {
-                        const n = s + 1
-                        const prev = setValue(i, n)
-                        return (
-                          <SetRow key={n} exerciseIndex={i} setNumber={n} reps={e.reps} prev={prev} />
-                        )
-                      })}
-                    </div>
-                  </li>
-                ))}
-              </ol>
+                <ol className="mt-6 space-y-8">
+                  {day.exercises.map((e, i) => (
+                    <li key={e.name}>
+                      <div className="flex items-baseline justify-between gap-4 border-b border-foreground pb-2">
+                        <h3 className="font-bold">
+                          <span className="mr-3 text-sm text-muted">{String(i + 1).padStart(2, '0')}</span>
+                          {e.name}
+                        </h3>
+                        <span className="flex shrink-0 items-center gap-3">
+                          <span className="text-sm text-muted">{formatVolume(e)}</span>
+                          <RestButton label={e.name} seconds={e.restSeconds} />
+                        </span>
+                      </div>
+                      <div className="mt-2 grid grid-cols-[3.5rem_1fr_1fr] items-center gap-x-3 gap-y-2 text-sm">
+                        <span />
+                        <span className="text-xs text-muted">重量（kg）</span>
+                        <span className="text-xs text-muted">次數</span>
+                        {Array.from({ length: e.sets }, (_, s) => {
+                          const n = s + 1
+                          const prev = setValue(i, n)
+                          return (
+                            <SetRow key={n} exerciseIndex={i} setNumber={n} reps={e.reps} prev={prev} />
+                          )
+                        })}
+                      </div>
+                    </li>
+                  ))}
+                </ol>
 
-              <label className="mt-8 block">
-                <span className="text-xs font-semibold uppercase tracking-wider">備註</span>
-                <textarea
-                  name="notes"
-                  rows={3}
-                  defaultValue={log?.notes ?? ''}
-                  placeholder="今天的狀態、睡眠、哪裡不舒服…"
-                  className="mt-2 w-full border border-line bg-white px-4 py-3 text-sm focus:border-foreground focus:outline-none"
-                />
-              </label>
+                <label className="mt-8 block">
+                  <span className="text-xs font-semibold uppercase tracking-wider">備註</span>
+                  <textarea
+                    name="notes"
+                    rows={3}
+                    defaultValue={log?.notes ?? ''}
+                    placeholder="今天的狀態、睡眠、哪裡不舒服…"
+                    className="mt-2 w-full border border-line bg-white px-4 py-3 text-sm focus:border-foreground focus:outline-none"
+                  />
+                </label>
 
-              <SubmitButton />
-            </form>
+                <SubmitButton />
+              </form>
+            </RestTimerProvider>
           )}
         </section>
       </div>

@@ -16,7 +16,7 @@ export function SubmitButton() {
   )
 }
 
-// 儲存後固定在畫面底部顯示提示，幾秒後自動消失。
+// 儲存後固定在畫面頂部顯示提示（底部留給休息計時器），幾秒後自動消失。
 // 每次儲存的 savedAt 都不同，讓連續儲存也會重新顯示。
 export function SavedToast({ savedAt, message }: { savedAt: string; message: string }) {
   const [hiddenFor, setHiddenFor] = useState<string | null>(null)
@@ -36,8 +36,8 @@ export function SavedToast({ savedAt, message }: { savedAt: string; message: str
     <div
       role="status"
       aria-live="polite"
-      className={`fixed inset-x-4 bottom-6 z-50 mx-auto flex max-w-md items-center justify-between gap-4 bg-foreground px-5 py-4 text-sm text-white shadow-lg transition-all duration-300 ${
-        visible ? 'translate-y-0 opacity-100' : 'pointer-events-none translate-y-4 opacity-0'
+      className={`fixed inset-x-4 top-4 z-50 mx-auto flex max-w-md items-center justify-between gap-4 bg-foreground px-5 py-4 text-sm text-white shadow-lg transition-all duration-300 ${
+        visible ? 'translate-y-0 opacity-100' : 'pointer-events-none -translate-y-4 opacity-0'
       }`}
     >
       <span>

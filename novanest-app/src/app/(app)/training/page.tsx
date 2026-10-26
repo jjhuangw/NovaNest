@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { connection } from 'next/server'
-import { DAY_KEYS, DAY_LABELS, formatVolume, isDayKey, mockPlan } from '@/lib/training/plan'
+import { DAY_KEYS, DAY_LABELS, formatDuration, formatVolume, isDayKey, mockPlan } from '@/lib/training/plan'
 import { todayKey } from '@/lib/training/dates'
 
 export const instant = false
@@ -87,7 +87,10 @@ export default async function TrainingPage(props: PageProps<'/training'>) {
                   <li key={e.name} className="flex items-baseline gap-4 py-4">
                     <span className="w-6 shrink-0 text-sm font-semibold text-muted">{String(i + 1).padStart(2, '0')}</span>
                     <span className="flex-1 font-semibold">{e.name}</span>
-                    <span className="text-sm tabular-nums">{formatVolume(e)}</span>
+                    <span className="text-right text-sm tabular-nums">
+                      {formatVolume(e)}
+                      <span className="block text-xs text-muted">休息 {formatDuration(e.restSeconds)}</span>
+                    </span>
                   </li>
                 ))}
               </ol>
