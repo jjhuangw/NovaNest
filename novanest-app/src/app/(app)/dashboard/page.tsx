@@ -1,18 +1,34 @@
 import { getSession } from '@/lib/auth/session'
 import { redirect } from 'next/navigation'
 import Image from 'next/image'
+import Link from 'next/link'
+import { DAY_LABELS, mockPlan, todayKey } from '@/lib/training/plan'
 
 export const instant = false
 
-const tiles = [
-  { title: '今日訓練', empty: '尚未設定訓練計劃', image: '/images/training.jpg', alt: '在深蹲架前準備槓鈴的女性' },
-  { title: '今日營養', empty: '尚未記錄飲食', image: '/images/nutrition.jpg', alt: '一碗蔬菜沙拉' },
-  { title: '體態紀錄', empty: '尚未上傳照片', image: '/images/body.jpg', alt: '伸展手臂的女性', position: 'object-[70%_center]' },
+type Tile = { title: string; subtitle: string; image: string; alt: string; position?: string; href?: string; cta?: string }
+
+const tiles: Tile[] = [
+  { title: '今日營養', subtitle: '尚未記錄飲食', image: '/images/nutrition.jpg', alt: '一碗蔬菜沙拉' },
+  { title: '體態紀錄', subtitle: '尚未上傳照片', image: '/images/body.jpg', alt: '伸展手臂的女性', position: 'object-[70%_center]' },
 ]
 
 export default async function DashboardPage() {
   const session = await getSession()
   if (!session) redirect('/login')
+
+  const today = mockPlan.days.find((d) => d.day === todayKey())!
+  const trainingTile: Tile = {
+    title: '今日訓練',
+    subtitle:
+      today.exercises.length > 0
+        ? `${DAY_LABELS[today.day]}・${today.title}（${today.exercises.length} 個動作）`
+        : `${DAY_LABELS[today.day]}・休息日`,
+    image: '/images/training.jpg',
+    alt: '在深蹲架前準備槓鈴的女性',
+    href: '/training',
+    cta: '查看課表',
+  }
 
   return (
     <div>
@@ -29,24 +45,35 @@ export default async function DashboardPage() {
       <section className="mx-auto max-w-6xl px-6 py-16">
         <h2 className="text-2xl font-bold sm:text-3xl">從這裡開始</h2>
         <div className="mt-8 grid grid-cols-1 gap-8 sm:grid-cols-3">
-          {tiles.map((t) => (
-            <article key={t.title} className="group">
-              <div className="relative aspect-[4/3] sm:aspect-[4/5] overflow-hidden bg-stone">
-                <Image
-                  src={t.image}
-                  alt={t.alt}
-                  fill
-                  sizes="(min-width: 640px) 33vw, 100vw"
-                  className={`object-cover ${t.position ?? ''} transition-transform duration-500 group-hover:scale-105`}
-                />
-              </div>
-              <h3 className="mt-4 text-lg font-bold">{t.title}</h3>
-              <p className="mt-1 text-sm text-muted">{t.empty}</p>
-              <span className="mt-3 inline-block text-xs font-semibold uppercase tracking-widest underline underline-offset-4">
-                即將推出
-              </span>
-            </article>
-          ))}
+          {[trainingTile, ...tiles].map((t) => {
+            const body = (
+              <>
+                <div className="relative aspect-[4/3] sm:aspect-[4/5] overflow-hidden bg-stone">
+                  <Image
+                    src={t.image}
+                    alt={t.alt}
+                    fill
+                    sizes="(min-width: 640px) 33vw, 100vw"
+                    className={`object-cover ${t.position ?? ''} transition-transform duration-500 group-hover:scale-105`}
+                  />
+                </div>
+                <h3 className="mt-4 text-lg font-bold">{t.title}</h3>
+                <p className="mt-1 text-sm text-muted">{t.subtitle}</p>
+                <span className="mt-3 inline-block text-xs font-semibold uppercase tracking-widest underline underline-offset-4">
+                  {t.cta ?? '即將推出'}
+                </span>
+              </>
+            )
+            return t.href ? (
+              <Link key={t.title} href={t.href} className="group block">
+                {body}
+              </Link>
+            ) : (
+              <article key={t.title} className="group">
+                {body}
+              </article>
+            )
+          })}
         </div>
       </section>
     </div>
