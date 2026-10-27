@@ -8,6 +8,8 @@ export const users = pgTable('users', {
   username: text('username').unique().notNull(),
   email: text('email').unique().notNull(),
   passwordHash: text('password_hash').notNull(),
+  // 'male' | 'female'；未設定時為 null，顯示時預設男性
+  gender: text('gender'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 }).enableRLS()
 

@@ -11,3 +11,10 @@ https://unsplash.com/license
 | training.jpg | /dashboard 今日訓練 | John Arano | https://unsplash.com/photos/h4i9G-de7Po |
 | nutrition.jpg | /dashboard 今日營養 | Anna Pelzer | https://unsplash.com/photos/IGfIGP5ONV0 |
 | body.jpg | /dashboard 體態紀錄 | Dane Wetton | https://unsplash.com/photos/AkSJQnem75Y |
+
+## Muscle diagram
+
+The male/female muscle diagrams on /training/log come from the npm package
+[react-muscle-highlighter](https://github.com/soroojshehryar/react-muscle-highlighter) 1.2.0,
+MIT License, Copyright (c) 2024 My Muscle Contributors. Free for commercial use;
+the license text is in node_modules/react-muscle-highlighter/LICENSE.

@@ -15,9 +15,10 @@ import {
 } from '@/lib/training/dates'
 import { getFirstLogDate, getLoggedDays, getSetCounts, getWorkoutLog } from '@/lib/training/logs'
 import { computeMuscleVolume } from '@/lib/training/muscles'
+import { getGender } from '@/lib/user/profile'
 import { DAY_KEYS, DAY_LABELS, formatVolume, mockPlan } from '@/lib/training/plan'
 import { saveWorkoutLogAction } from './actions'
-import { SavedToast, SubmitButton } from './form-feedback'
+import { SavedToast, SubmitButton } from '@/components/form-feedback'
 import MuscleMap from './muscle-map'
 import { RestButton, RestTimerProvider } from './rest-timer'
 
@@ -37,11 +38,12 @@ export default async function TrainingLogPage(props: PageProps<'/training/log'>)
 
   const week = { from: weekStart(date), to: addDays(weekStart(date), 6) }
   const month = { from: monthStart(date), to: monthEnd(date) }
-  const [logged, log, firstLogDate, weekSetCounts] = await Promise.all([
+  const [logged, log, firstLogDate, weekSetCounts, gender] = await Promise.all([
     getLoggedDays(session.userId, week.from < month.from ? week.from : month.from, week.to > month.to ? week.to : month.to),
     getWorkoutLog(session.userId, date),
     getFirstLogDate(session.userId),
     getSetCounts(session.userId, week.from, week.to),
+    getGender(session.userId),
   ])
 
   // 還沒有任何紀錄時，從今天開始算
@@ -106,7 +108,11 @@ export default async function TrainingLogPage(props: PageProps<'/training/log'>)
             <Legend className="border border-line" label="休息／未開始／未來" />
           </ul>
 
-          <MuscleMap volumes={muscleVolumes} weekLabel={`${formatDate(week.from)}–${formatDate(week.to)} 這週`} />
+          <MuscleMap
+            volumes={muscleVolumes}
+            weekLabel={`${formatDate(week.from)}–${formatDate(week.to)} 這週`}
+            gender={gender ?? 'male'}
+          />
         </section>
 
         <section aria-labelledby="log-heading">

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useFormStatus } from 'react-dom'
 
-export function SubmitButton() {
+export function SubmitButton({ label = '儲存紀錄' }: { label?: string }) {
   const { pending } = useFormStatus()
   return (
     <button
@@ -11,7 +11,7 @@ export function SubmitButton() {
       disabled={pending}
       className="mt-6 w-full bg-foreground py-3.5 text-sm font-semibold uppercase tracking-widest text-white transition-opacity hover:opacity-85 disabled:opacity-50 sm:w-auto sm:px-12"
     >
-      {pending ? '儲存中…' : '儲存紀錄'}
+      {pending ? '儲存中…' : label}
     </button>
   )
 }

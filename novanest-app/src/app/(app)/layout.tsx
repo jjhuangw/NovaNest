@@ -26,7 +26,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           <Link href="/training/log" className="font-semibold underline-offset-4 hover:underline">
             紀錄
           </Link>
-          <span className="hidden font-semibold sm:inline">{session.username}</span>
+          <Link href="/settings" className="font-semibold underline-offset-4 hover:underline" aria-label="個人設定">
+            <span className="hidden sm:inline">{session.username}</span>
+            <span className="sm:hidden">設定</span>
+          </Link>
           <LogoutButton />
         </div>
       </nav>
