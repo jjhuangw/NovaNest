@@ -14,17 +14,20 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <div className="bg-foreground py-2 text-center text-xs tracking-wider text-white">
         訓練・飲食・體態，一站式管理你的健身旅程
       </div>
-      <nav className="sticky top-0 z-10 flex items-center justify-between border-b border-line bg-white/95 px-6 py-4 backdrop-blur">
+      <nav className="sticky top-0 z-10 flex items-center justify-between border-b border-line bg-white/95 px-4 py-4 backdrop-blur sm:px-6">
         <Link href="/dashboard" className="inline-flex items-center gap-2">
           <span className="h-3 w-3 rounded-full bg-accent" />
-          <span className="text-lg font-black uppercase tracking-[0.2em]">NovaNest</span>
+          <span className="text-base font-black uppercase tracking-[0.15em] sm:text-lg sm:tracking-[0.2em]">NovaNest</span>
         </Link>
-        <div className="flex items-center gap-4 text-sm sm:gap-6">
+        <div className="flex items-center gap-3 whitespace-nowrap text-sm sm:gap-6">
           <Link href="/training" className="font-semibold underline-offset-4 hover:underline">
             課表
           </Link>
           <Link href="/training/log" className="font-semibold underline-offset-4 hover:underline">
             紀錄
+          </Link>
+          <Link href="/progress" className="font-semibold underline-offset-4 hover:underline">
+            體態
           </Link>
           <Link href="/settings" className="font-semibold underline-offset-4 hover:underline" aria-label="個人設定">
             <span className="hidden sm:inline">{session.username}</span>

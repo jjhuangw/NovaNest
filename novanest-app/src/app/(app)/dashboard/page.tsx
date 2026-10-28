@@ -3,9 +3,10 @@ import { redirect } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
 import { DAY_LABELS, mockPlan } from '@/lib/training/plan'
-import { addDays, todayISO, todayKey, weekStart } from '@/lib/training/dates'
+import { addDays, formatDate, todayISO, todayKey, weekStart } from '@/lib/training/dates'
 import { computeCompletion, formatRate } from '@/lib/training/completion'
 import { getFirstLogDate, getLoggedDays } from '@/lib/training/logs'
+import { countPhotos } from '@/lib/photos/photos'
 
 export const instant = false
 
@@ -13,7 +14,6 @@ type Tile = { title: string; subtitle: string; image: string; alt: string; posit
 
 const tiles: Tile[] = [
   { title: '今日營養', subtitle: '尚未記錄飲食', image: '/images/nutrition.jpg', alt: '一碗蔬菜沙拉' },
-  { title: '體態紀錄', subtitle: '尚未上傳照片', image: '/images/body.jpg', alt: '伸展手臂的女性', position: 'object-[70%_center]' },
 ]
 
 export default async function DashboardPage() {
@@ -23,10 +23,20 @@ export default async function DashboardPage() {
   const today = mockPlan.days.find((d) => d.day === todayKey())!
   const todayDate = todayISO()
   const week = { from: weekStart(todayDate), to: addDays(weekStart(todayDate), 6) }
-  const [logged, firstLogDate] = await Promise.all([
+  const [logged, firstLogDate, photoStats] = await Promise.all([
     getLoggedDays(session.userId, week.from, week.to),
     getFirstLogDate(session.userId),
+    countPhotos(session.userId),
   ])
+  const photoTile: Tile = {
+    title: '體態紀錄',
+    subtitle: photoStats.latest ? `${photoStats.count} 張照片・最近一次 ${formatDate(photoStats.latest)}` : '尚未上傳照片',
+    image: '/images/body.jpg',
+    alt: '伸展手臂的女性',
+    position: 'object-[70%_center]',
+    href: '/progress',
+    cta: photoStats.count > 0 ? '查看與上傳' : '上傳第一張照片',
+  }
   const weekStats = computeCompletion(mockPlan, week, firstLogDate ?? todayDate, todayDate, logged)
   const trainingTile: Tile = {
     title: '今日訓練',
@@ -55,7 +65,7 @@ export default async function DashboardPage() {
       <section className="mx-auto max-w-6xl px-6 py-16">
         <h2 className="text-2xl font-bold sm:text-3xl">從這裡開始</h2>
         <div className="mt-8 grid grid-cols-1 gap-8 sm:grid-cols-3">
-          {[trainingTile, ...tiles].map((t) => {
+          {[trainingTile, ...tiles, photoTile].map((t) => {
             const body = (
               <>
                 <div className="relative aspect-[4/3] sm:aspect-[4/5] overflow-hidden bg-stone">

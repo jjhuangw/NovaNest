@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, timestamp, numeric, pgEnum, date, integer, uniqueIndex } from 'drizzle-orm/pg-core'
+import { pgTable, uuid, text, timestamp, numeric, pgEnum, date, integer, uniqueIndex, index } from 'drizzle-orm/pg-core'
 
 // 所有資料表都開啟 RLS 且不設 policy：App 以 postgres 角色連線（會略過 RLS），
 // 而 Supabase 公開 API（anon key）則完全無法存取。不要移除 enableRLS()，
@@ -51,9 +51,26 @@ export const setLogs = pgTable('set_logs', {
   reps: integer('reps').notNull(),
 }).enableRLS()
 
+// 體態照片：檔案存在 Supabase Storage 的私有 bucket，這裡只記錄路徑與資訊。
+export const bodyPhotos = pgTable(
+  'body_photos',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
+    takenOn: date('taken_on', { mode: 'string' }).notNull(),
+    pose: text('pose').notNull(),
+    storagePath: text('storage_path').notNull(),
+    weightKg: numeric('weight_kg', { precision: 5, scale: 2 }),
+    notes: text('notes'),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+  },
+  (t) => [index('body_photos_user_taken_idx').on(t.userId, t.takenOn)],
+).enableRLS()
+
 export type User = typeof users.$inferSelect
 export type NewUser = typeof users.$inferInsert
 export type BodyStats = typeof bodyStats.$inferSelect
 export type NewBodyStats = typeof bodyStats.$inferInsert
 export type WorkoutLog = typeof workoutLogs.$inferSelect
 export type SetLog = typeof setLogs.$inferSelect
+export type BodyPhoto = typeof bodyPhotos.$inferSelect
