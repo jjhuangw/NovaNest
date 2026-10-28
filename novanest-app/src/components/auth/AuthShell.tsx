@@ -2,12 +2,12 @@ import Image from 'next/image'
 import Link from 'next/link'
 
 export const inputClass =
-  'w-full border border-line bg-white px-4 py-3 text-sm text-foreground placeholder-muted/70 focus:border-foreground focus:outline-none'
+  'w-full border border-line bg-surface px-4 py-3 text-sm text-foreground placeholder-muted/70 focus:border-foreground focus:outline-none'
 
 export const labelClass = 'block text-xs font-semibold uppercase tracking-wider text-foreground mb-2'
 
 export const buttonClass =
-  'w-full bg-foreground py-3.5 text-sm font-semibold uppercase tracking-widest text-white transition-opacity hover:opacity-85 disabled:opacity-50'
+  'w-full bg-foreground py-3.5 text-sm font-semibold uppercase tracking-widest text-background transition-opacity hover:opacity-85 disabled:opacity-50'
 
 export default function AuthShell({
   image,

@@ -3,30 +3,8 @@
 export const DAY_KEYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as const
 export type DayKey = (typeof DAY_KEYS)[number]
 
-export const DAY_LABELS: Record<DayKey, string> = {
-  mon: '週一',
-  tue: '週二',
-  wed: '週三',
-  thu: '週四',
-  fri: '週五',
-  sat: '週六',
-  sun: '週日',
-}
-
 export const MUSCLES = ['chest', 'shoulders', 'back', 'biceps', 'triceps', 'core', 'quads', 'posterior', 'calves'] as const
 export type Muscle = (typeof MUSCLES)[number]
-
-export const MUSCLE_LABELS: Record<Muscle, string> = {
-  chest: '胸',
-  shoulders: '肩',
-  back: '背',
-  biceps: '二頭',
-  triceps: '三頭',
-  core: '核心',
-  quads: '股四頭',
-  posterior: '臀・腿後側',
-  calves: '小腿',
-}
 
 export interface Exercise {
   name: string
@@ -72,10 +50,6 @@ export function formatDuration(seconds: number): string {
   const m = Math.floor(seconds / 60)
   const s = seconds % 60
   return `${m}:${String(s).padStart(2, '0')}`
-}
-
-export function formatVolume(e: Exercise): string {
-  return `${e.sets} 組 × ${e.reps} 下${e.perSide ? '／側' : ''}`
 }
 
 export const mockPlan: TrainingPlan = {

@@ -3,9 +3,11 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import AuthShell, { buttonClass, inputClass, labelClass } from '@/components/auth/AuthShell'
+import { useI18n } from '@/lib/i18n/client'
 
 export default function RegisterPage() {
   const [form, setForm] = useState({ username: '', email: '', password: '' })
+  const { t } = useI18n()
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -21,7 +23,7 @@ export default function RegisterPage() {
       })
       const data = await res.json()
       if (!res.ok) {
-        setError(data.error)
+        setError(t.auth.errors[data.error] ?? t.auth.errors.unknown)
         return
       }
       window.location.href = '/dashboard'
@@ -31,21 +33,21 @@ export default function RegisterPage() {
   }
 
   return (
-    <AuthShell image="/images/register.jpg" imageAlt="在瑜珈墊上做樹式的女性" tagline="打造屬於你的體態。" title="建立帳號">
+    <AuthShell image="/images/register.jpg" imageAlt={t.auth.registerImageAlt} tagline={t.auth.registerTagline} title={t.auth.registerTitle}>
       <form onSubmit={handleSubmit} className="space-y-5">
         <div>
-          <label className={labelClass}>使用者名稱</label>
+          <label className={labelClass}>{t.auth.username}</label>
           <input
             type="text"
             required
             value={form.username}
             onChange={(e) => setForm({ ...form, username: e.target.value })}
-            placeholder="英數字與底線"
+            placeholder={t.auth.usernamePlaceholder}
             className={inputClass}
           />
         </div>
         <div>
-          <label className={labelClass}>Email</label>
+          <label className={labelClass}>{t.auth.email}</label>
           <input
             type="email"
             required
@@ -55,7 +57,7 @@ export default function RegisterPage() {
           />
         </div>
         <div>
-          <label className={labelClass}>密碼（至少 8 字元）</label>
+          <label className={labelClass}>{t.auth.passwordHint}</label>
           <input
             type="password"
             required
@@ -69,14 +71,14 @@ export default function RegisterPage() {
         {error && <p className="border-l-2 border-accent bg-stone px-3 py-2 text-sm text-accent">{error}</p>}
 
         <button type="submit" disabled={loading} className={buttonClass}>
-          {loading ? '註冊中...' : '建立帳號'}
+          {loading ? t.auth.registering : t.auth.register}
         </button>
       </form>
 
       <p className="text-sm text-muted">
-        已有帳號？{' '}
+        {t.auth.haveAccount}{' '}
         <Link href="/login" className="font-semibold text-foreground underline underline-offset-4">
-          登入
+          {t.auth.login}
         </Link>
       </p>
     </AuthShell>

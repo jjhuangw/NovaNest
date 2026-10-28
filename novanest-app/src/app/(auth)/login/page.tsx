@@ -3,9 +3,11 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import AuthShell, { buttonClass, inputClass, labelClass } from '@/components/auth/AuthShell'
+import { useI18n } from '@/lib/i18n/client'
 
 export default function LoginPage() {
   const [form, setForm] = useState({ email: '', password: '' })
+  const { t } = useI18n()
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -21,7 +23,7 @@ export default function LoginPage() {
       })
       const data = await res.json()
       if (!res.ok) {
-        setError(data.error)
+        setError(t.auth.errors[data.error] ?? t.auth.errors.unknown)
         return
       }
       window.location.href = '/dashboard'
@@ -31,10 +33,10 @@ export default function LoginPage() {
   }
 
   return (
-    <AuthShell image="/images/login.jpg" imageAlt="在木地板上冥想的人" tagline="每一天，都更接近理想的自己。" title="登入帳號">
+    <AuthShell image="/images/login.jpg" imageAlt={t.auth.loginImageAlt} tagline={t.auth.loginTagline} title={t.auth.loginTitle}>
       <form onSubmit={handleSubmit} className="space-y-5">
         <div>
-          <label className={labelClass}>Email</label>
+          <label className={labelClass}>{t.auth.email}</label>
           <input
             type="email"
             required
@@ -44,7 +46,7 @@ export default function LoginPage() {
           />
         </div>
         <div>
-          <label className={labelClass}>密碼</label>
+          <label className={labelClass}>{t.auth.password}</label>
           <input
             type="password"
             required
@@ -57,14 +59,14 @@ export default function LoginPage() {
         {error && <p className="border-l-2 border-accent bg-stone px-3 py-2 text-sm text-accent">{error}</p>}
 
         <button type="submit" disabled={loading} className={buttonClass}>
-          {loading ? '登入中...' : '登入'}
+          {loading ? t.auth.loggingIn : t.auth.login}
         </button>
       </form>
 
       <p className="text-sm text-muted">
-        還沒有帳號？{' '}
+        {t.auth.noAccount}{' '}
         <Link href="/register" className="font-semibold text-foreground underline underline-offset-4">
-          立即註冊
+          {t.auth.registerNow}
         </Link>
       </p>
     </AuthShell>

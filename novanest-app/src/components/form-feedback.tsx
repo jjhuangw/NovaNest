@@ -2,16 +2,18 @@
 
 import { useEffect, useState } from 'react'
 import { useFormStatus } from 'react-dom'
+import { useI18n } from '@/lib/i18n/client'
 
-export function SubmitButton({ label = '儲存紀錄' }: { label?: string }) {
+export function SubmitButton({ label }: { label?: string }) {
   const { pending } = useFormStatus()
+  const { t } = useI18n()
   return (
     <button
       type="submit"
       disabled={pending}
-      className="mt-6 w-full bg-foreground py-3.5 text-sm font-semibold uppercase tracking-widest text-white transition-opacity hover:opacity-85 disabled:opacity-50 sm:w-auto sm:px-12"
+      className="mt-6 w-full bg-foreground py-3.5 text-sm font-semibold uppercase tracking-widest text-background transition-opacity hover:opacity-85 disabled:opacity-50 sm:w-auto sm:px-12"
     >
-      {pending ? '儲存中…' : label}
+      {pending ? t.common.saving : (label ?? t.common.saveLog)}
     </button>
   )
 }
@@ -19,6 +21,7 @@ export function SubmitButton({ label = '儲存紀錄' }: { label?: string }) {
 // 儲存後固定在畫面頂部顯示提示（底部留給休息計時器），幾秒後自動消失。
 // 每次儲存的 savedAt 都不同，讓連續儲存也會重新顯示。
 export function SavedToast({ savedAt, message }: { savedAt: string; message: string }) {
+  const { t } = useI18n()
   const [hiddenFor, setHiddenFor] = useState<string | null>(null)
   const visible = hiddenFor !== savedAt
 
@@ -36,7 +39,7 @@ export function SavedToast({ savedAt, message }: { savedAt: string; message: str
     <div
       role="status"
       aria-live="polite"
-      className={`fixed inset-x-4 top-4 z-50 mx-auto flex max-w-md items-center justify-between gap-4 bg-foreground px-5 py-4 text-sm text-white shadow-lg transition-all duration-300 ${
+      className={`fixed inset-x-4 top-4 z-50 mx-auto flex max-w-md items-center justify-between gap-4 bg-foreground px-5 py-4 text-sm text-background shadow-lg transition-all duration-300 ${
         visible ? 'translate-y-0 opacity-100' : 'pointer-events-none -translate-y-4 opacity-0'
       }`}
     >
@@ -46,8 +49,8 @@ export function SavedToast({ savedAt, message }: { savedAt: string; message: str
         </span>
         {message}
       </span>
-      <button type="button" onClick={() => setHiddenFor(savedAt)} className="shrink-0 whitespace-nowrap text-xs text-white/70 hover:text-white">
-        關閉
+      <button type="button" onClick={() => setHiddenFor(savedAt)} className="shrink-0 whitespace-nowrap text-xs text-background/70 hover:text-background">
+        {t.common.close}
       </button>
     </div>
   )

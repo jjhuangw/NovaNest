@@ -3,7 +3,8 @@ import { redirect } from 'next/navigation'
 import { getSession } from '@/lib/auth/session'
 import { formatDate, isISODate, todayISO } from '@/lib/training/dates'
 import { listPhotos, type PhotoView } from '@/lib/photos/photos'
-import { isPose, POSE_LABELS, POSES, type Pose } from '@/lib/photos/poses'
+import { isPose, POSES, type Pose } from '@/lib/photos/poses'
+import { getI18n } from '@/lib/i18n/server'
 import DeleteButton from './delete-button'
 import UploadForm from './upload-form'
 
@@ -11,6 +12,10 @@ export const instant = false
 
 function daysBetween(a: string, b: string) {
   return Math.round((Date.parse(`${b}T00:00:00Z`) - Date.parse(`${a}T00:00:00Z`)) / 86_400_000)
+}
+
+function formatSigned(n: number) {
+  return `${n > 0 ? '+' : ''}${n.toFixed(1)}`
 }
 
 function formatWeight(kg: number | null) {
@@ -21,7 +26,8 @@ export default async function ProgressPage(props: PageProps<'/progress'>) {
   const session = await getSession()
   if (!session) redirect('/login')
 
-  const [params, photos] = await Promise.all([props.searchParams, listPhotos(session.userId)])
+  const [params, photos, { t }] = await Promise.all([props.searchParams, listPhotos(session.userId), getI18n()])
+  const tp = t.progress
   const today = todayISO()
 
   // 對比：預設挑有照片的第一個姿勢，最早 vs 最新
@@ -39,6 +45,8 @@ export default async function ProgressPage(props: PageProps<'/progress'>) {
   const weightChange =
     weighed.length >= 2 ? weighed[0].weightKg! - weighed[weighed.length - 1].weightKg! : null
 
+  const apart = tp.daysApart(beforePhoto && afterPhoto ? daysBetween(beforePhoto.takenOn, afterPhoto.takenOn) : 0)
+
   const byDate = new Map<string, PhotoView[]>()
   for (const p of photos) byDate.set(p.takenOn, [...(byDate.get(p.takenOn) ?? []), p])
 
@@ -47,21 +55,21 @@ export default async function ProgressPage(props: PageProps<'/progress'>) {
       <section className="bg-stone">
         <div className="mx-auto max-w-6xl px-6 py-12">
           <p className="text-xs font-semibold uppercase tracking-[0.3em] text-muted">Progress</p>
-          <h1 className="mt-3 text-3xl font-bold sm:text-5xl">體態紀錄</h1>
-          <p className="mt-4 text-base">定期在相同光線與姿勢下拍照，最能看出變化。</p>
+          <h1 className="mt-3 text-3xl font-bold sm:text-5xl">{tp.title}</h1>
+          <p className="mt-4 text-base">{tp.intro}</p>
           <dl className="mt-8 grid max-w-2xl grid-cols-3 gap-6">
-            <Stat label="照片" value={`${photos.length} 張`} />
-            <Stat label="最近一次" value={photos[0] ? formatDate(photos[0].takenOn) : '—'} />
+            <Stat label={tp.photos} value={tp.photoCount(photos.length)} />
+            <Stat label={tp.latest} value={photos[0] ? formatDate(photos[0].takenOn) : '—'} />
             <Stat
-              label="體重變化"
-              value={weightChange === null ? '—' : `${weightChange > 0 ? '+' : ''}${weightChange.toFixed(1)} kg`}
+              label={tp.weightChange}
+              value={weightChange === null ? '—' : `${formatSigned(weightChange)} kg`}
             />
           </dl>
         </div>
       </section>
 
       <section className="mx-auto max-w-6xl px-6 py-12">
-        <h2 className="text-2xl font-bold">上傳照片</h2>
+        <h2 className="text-2xl font-bold">{tp.upload}</h2>
         <div className="mt-6">
           <UploadForm today={today} />
         </div>
@@ -70,47 +78,46 @@ export default async function ProgressPage(props: PageProps<'/progress'>) {
       {photos.length > 0 && (
         <section className="border-t border-line">
           <div className="mx-auto max-w-6xl px-6 py-12">
-            <h2 className="text-2xl font-bold">前後對比</h2>
+            <h2 className="text-2xl font-bold">{tp.compare}</h2>
             <form method="get" className="mt-6 flex flex-wrap items-end gap-4 text-sm">
               <label>
-                <span className="mb-1 block text-xs text-muted">姿勢</span>
-                <select name="pose" defaultValue={pose} className="border border-line bg-white px-3 py-2">
+                <span className="mb-1 block text-xs text-muted">{tp.pose}</span>
+                <select name="pose" defaultValue={pose} className="border border-line bg-surface px-3 py-2">
                   {POSES.map((p) => (
                     <option key={p} value={p}>
-                      {POSE_LABELS[p]}
+                      {tp.poses[p]}
                     </option>
                   ))}
                 </select>
               </label>
               {poseDates.length > 0 && (
                 <>
-                  <DateSelect name="a" label="之前" dates={poseDates} value={before!} />
-                  <DateSelect name="b" label="之後" dates={poseDates} value={after!} />
+                  <DateSelect name="a" label={tp.before} dates={poseDates} value={before!} />
+                  <DateSelect name="b" label={tp.after} dates={poseDates} value={after!} />
                 </>
               )}
-              <button type="submit" className="border border-foreground px-4 py-2 font-semibold hover:bg-foreground hover:text-white">
-                比較
+              <button type="submit" className="border border-foreground px-4 py-2 font-semibold hover:bg-foreground hover:text-background">
+                {tp.compareButton}
               </button>
             </form>
 
             {beforePhoto && afterPhoto ? (
               <>
                 <div className="mt-6 grid grid-cols-2 gap-3 sm:gap-6">
-                  <CompareCard title="之前" photo={beforePhoto} />
-                  <CompareCard title="之後" photo={afterPhoto} />
+                  <CompareCard title={tp.before} photo={beforePhoto} />
+                  <CompareCard title={tp.after} photo={afterPhoto} />
                 </div>
                 <p className="mt-4 text-sm">
-                  相隔 <span className="font-bold">{daysBetween(beforePhoto.takenOn, afterPhoto.takenOn)}</span> 天
-                  {beforePhoto.weightKg !== null && afterPhoto.weightKg !== null && (
-                    <>
-                      ・體重 {afterPhoto.weightKg - beforePhoto.weightKg > 0 ? '+' : ''}
-                      {(afterPhoto.weightKg - beforePhoto.weightKg).toFixed(1)} kg
-                    </>
-                  )}
+                  {apart.before}
+                  <span className="font-bold">{apart.value}</span>
+                  {apart.after}
+                  {beforePhoto.weightKg !== null &&
+                    afterPhoto.weightKg !== null &&
+                    tp.weightDiff(formatSigned(afterPhoto.weightKg - beforePhoto.weightKg))}
                 </p>
               </>
             ) : (
-              <p className="mt-6 bg-stone px-6 py-10 text-center text-muted">還沒有{POSE_LABELS[pose]}的照片。</p>
+              <p className="mt-6 bg-stone px-6 py-10 text-center text-muted">{tp.noPose(tp.poses[pose])}</p>
             )}
           </div>
         </section>
@@ -119,7 +126,7 @@ export default async function ProgressPage(props: PageProps<'/progress'>) {
       {photos.length > 0 && (
         <section className="border-t border-line">
           <div className="mx-auto max-w-6xl px-6 py-12">
-            <h2 className="text-2xl font-bold">所有照片</h2>
+            <h2 className="text-2xl font-bold">{tp.all}</h2>
             <div className="mt-6 space-y-10">
               {[...byDate].map(([date, list]) => (
                 <div key={date}>
@@ -136,12 +143,12 @@ export default async function ProgressPage(props: PageProps<'/progress'>) {
                       <li key={p.id}>
                         <a href={p.url ?? '#'} target="_blank" rel="noreferrer" className="block aspect-[3/4] overflow-hidden bg-stone">
                           {p.url && (
-                            <img src={p.url} alt={`${p.takenOn} ${POSE_LABELS[p.pose]}`} loading="lazy" className="h-full w-full object-cover" />
+                            <img src={p.url} alt={`${p.takenOn} ${tp.poses[p.pose]}`} loading="lazy" className="h-full w-full object-cover" />
                           )}
                         </a>
                         <div className="mt-1.5 flex items-baseline justify-between gap-2">
-                          <span className="text-sm font-semibold">{POSE_LABELS[p.pose]}</span>
-                          <DeleteButton id={p.id} label={`${p.takenOn} 的${POSE_LABELS[p.pose]}照片`} />
+                          <span className="text-sm font-semibold">{tp.poses[p.pose]}</span>
+                          <DeleteButton id={p.id} label={tp.deleteLabel(p.takenOn, tp.poses[p.pose])} />
                         </div>
                         {p.notes && <p className="mt-0.5 line-clamp-2 text-xs text-muted">{p.notes}</p>}
                       </li>
@@ -161,7 +168,7 @@ function DateSelect({ name, label, dates, value }: { name: string; label: string
   return (
     <label>
       <span className="mb-1 block text-xs text-muted">{label}</span>
-      <select name={name} defaultValue={value} className="border border-line bg-white px-3 py-2 tabular-nums">
+      <select name={name} defaultValue={value} className="border border-line bg-surface px-3 py-2 tabular-nums">
         {dates.map((d) => (
           <option key={d} value={d}>
             {d.replaceAll('-', '/')}

@@ -2,6 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
 import { formatDuration } from '@/lib/training/plan'
+import { useI18n } from '@/lib/i18n/client'
 
 // 以「結束時間」計算剩餘秒數，螢幕關閉或切換分頁回來後仍然準確。
 interface Timer {
@@ -46,6 +47,7 @@ function beep() {
 }
 
 export function RestTimerProvider({ children }: { children: React.ReactNode }) {
+  const { t } = useI18n()
   const [timer, setTimer] = useState<Timer | null>(null)
   const [now, setNow] = useState(() => Date.now())
   const notifiedFor = useRef<number | null>(null)
@@ -78,11 +80,11 @@ export function RestTimerProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!timer) return
     const original = document.title
-    document.title = finished ? '休息結束！' : `${formatDuration(remaining)} 休息中`
+    document.title = finished ? t.timer.finishedTitle : t.timer.runningTitle(formatDuration(remaining))
     return () => {
       document.title = original
     }
-  }, [timer, finished, remaining])
+  }, [timer, finished, remaining, t])
 
   function adjust(deltaSeconds: number) {
     setTimer((t) => {
@@ -117,33 +119,33 @@ export function RestTimerProvider({ children }: { children: React.ReactNode }) {
         <div
           role="timer"
           aria-live={finished ? 'assertive' : 'off'}
-          className={`fixed inset-x-0 bottom-0 z-40 border-t pb-[env(safe-area-inset-bottom)] text-white ${
-            finished ? 'border-accent bg-accent' : 'border-foreground bg-foreground'
+          className={`fixed inset-x-0 bottom-0 z-40 border-t pb-[env(safe-area-inset-bottom)] ${
+            finished ? 'border-accent bg-accent text-white' : 'border-foreground bg-foreground text-background'
           }`}
         >
-          <div className="h-1 bg-white/20">
-            <div className="h-full bg-white transition-[width] duration-200" style={{ width: `${Math.min(100, progress * 100)}%` }} />
+          <div className="h-1 bg-current/20">
+            <div className="h-full bg-current transition-[width] duration-200" style={{ width: `${Math.min(100, progress * 100)}%` }} />
           </div>
           <div className="mx-auto flex max-w-6xl items-center gap-4 px-6 py-3">
             <div className="min-w-0 flex-1">
-              <p className="truncate text-xs text-white/70">{finished ? '休息結束，開始下一組！' : `休息中・${timer.label}`}</p>
+              <p className="truncate text-xs opacity-70">{finished ? t.timer.finished : t.timer.running(timer.label)}</p>
               <p className="text-3xl font-bold tabular-nums">{formatDuration(remaining)}</p>
             </div>
             {!finished && (
               <>
-                <TimerButton onClick={() => adjust(-15)} label="減少 15 秒">
+                <TimerButton onClick={() => adjust(-15)} label={t.timer.minus}>
                   −15
                 </TimerButton>
-                <TimerButton onClick={() => adjust(15)} label="增加 15 秒">
+                <TimerButton onClick={() => adjust(15)} label={t.timer.plus}>
                   +15
                 </TimerButton>
-                <TimerButton onClick={togglePause} label={timer.pausedRemaining !== null ? '繼續' : '暫停'}>
-                  {timer.pausedRemaining !== null ? '繼續' : '暫停'}
+                <TimerButton onClick={togglePause} label={timer.pausedRemaining !== null ? t.timer.resume : t.timer.pause}>
+                  {timer.pausedRemaining !== null ? t.timer.resume : t.timer.pause}
                 </TimerButton>
               </>
             )}
-            <TimerButton onClick={() => setTimer(null)} label={finished ? '關閉' : '略過休息'}>
-              {finished ? '關閉' : '略過'}
+            <TimerButton onClick={() => setTimer(null)} label={finished ? t.common.close : t.timer.skipLabel}>
+              {finished ? t.common.close : t.timer.skip}
             </TimerButton>
           </div>
         </div>
@@ -158,7 +160,7 @@ function TimerButton({ onClick, label, children }: { onClick: () => void; label:
       type="button"
       onClick={onClick}
       aria-label={label}
-      className="shrink-0 border border-white/40 px-2.5 py-2 text-xs font-semibold tabular-nums transition-colors hover:bg-white hover:text-foreground sm:px-3"
+      className="shrink-0 border border-current/40 px-2.5 py-2 text-xs font-semibold tabular-nums transition-colors hover:bg-current/15 sm:px-3"
     >
       {children}
     </button>
@@ -167,14 +169,15 @@ function TimerButton({ onClick, label, children }: { onClick: () => void; label:
 
 export function RestButton({ label, seconds }: { label: string; seconds: number }) {
   const ctx = useContext(RestTimerContext)
+  const { t } = useI18n()
   if (!ctx) throw new Error('RestButton must be used inside RestTimerProvider')
   return (
     <button
       type="button"
       onClick={() => ctx.start(label, seconds)}
-      className="shrink-0 border border-foreground px-2.5 py-1 text-xs font-semibold tabular-nums transition-colors hover:bg-foreground hover:text-white"
+      className="shrink-0 border border-foreground px-2.5 py-1 text-xs font-semibold tabular-nums transition-colors hover:bg-foreground hover:text-background"
     >
-      休息 {formatDuration(seconds)}
+      {t.common.rest} {formatDuration(seconds)}
     </button>
   )
 }

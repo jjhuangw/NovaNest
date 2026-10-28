@@ -1,13 +1,63 @@
 @import "tailwindcss";
 
+/* 深色模式：預設跟隨系統；html[data-theme] 為使用者手動選擇 */
+@custom-variant dark {
+  @media (prefers-color-scheme: dark) {
+    &:where(:root:not([data-theme="light"]) *, :root:not([data-theme="light"])) {
+      @slot;
+    }
+  }
+  &:where([data-theme="dark"] *, [data-theme="dark"]) {
+    @slot;
+  }
+}
+
 /* 參考 lululemon 風格：白底黑字、紅色品牌點綴、大量留白 */
 :root {
+  color-scheme: light;
   --background: #ffffff;
   --foreground: #000000;
   --muted: #5f5f5f;
   --line: #d9d9d9;
   --stone: #f4f3f1;
   --accent: #d22030;
+  /* 輸入框、卡片等浮在背景上的表面 */
+  --surface: #ffffff;
+  /* 肌群圖與進度條 */
+  --track: #ecebe7;
+  --warning-text: #b07a00;
+  --status-upcoming: #c3c2b7;
+}
+
+/* 深色：近黑底、柔和白字，品牌紅提高亮度以維持對比 */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --background: #0e0e0e;
+    --foreground: #f2f2f0;
+    --muted: #a3a3a0;
+    --line: #34342f;
+    --stone: #1a1a18;
+    --accent: #ff4b57;
+    --surface: #161615;
+    --track: #2b2b28;
+    --warning-text: #fab219;
+    --status-upcoming: #5e5d57;
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --background: #0e0e0e;
+  --foreground: #f2f2f0;
+  --muted: #a3a3a0;
+  --line: #34342f;
+  --stone: #1a1a18;
+  --accent: #ff4b57;
+  --surface: #161615;
+  --track: #2b2b28;
+  --warning-text: #fab219;
+  --status-upcoming: #5e5d57;
 }
 
 @theme inline {
@@ -17,6 +67,9 @@
   --color-line: var(--line);
   --color-stone: var(--stone);
   --color-accent: var(--accent);
+  --color-surface: var(--surface);
+  --color-track: var(--track);
+  --color-warning-text: var(--warning-text);
   --font-sans: var(--font-geist-sans), "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", sans-serif;
   --font-mono: var(--font-geist-mono);
 }

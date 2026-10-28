@@ -12,8 +12,6 @@ export const MAX_EDGE = 1600
 export const MIN_EDGE = 300
 export const MAX_UPLOAD_BYTES = 4 * 1024 * 1024
 
-export const LIMITS_HINT = 'JPEG、PNG、WebP，15MB 以內，至少 300 × 300 像素'
-
 export function formatMB(bytes: number) {
   return `${(bytes / 1024 / 1024).toFixed(1)}MB`
 }

@@ -16,7 +16,10 @@ import {
 import { getFirstLogDate, getLoggedDays, getSetCounts, getWorkoutLog } from '@/lib/training/logs'
 import { computeMuscleVolume } from '@/lib/training/muscles'
 import { getGender } from '@/lib/user/profile'
-import { DAY_KEYS, DAY_LABELS, formatVolume, mockPlan } from '@/lib/training/plan'
+import { DAY_KEYS, mockPlan } from '@/lib/training/plan'
+import { planText } from '@/lib/training/plan-copy'
+import { getI18n } from '@/lib/i18n/server'
+import type { Messages } from '@/lib/i18n/messages'
 import { saveWorkoutLogAction } from './actions'
 import { SavedToast, SubmitButton } from '@/components/form-feedback'
 import MuscleMap from './muscle-map'
@@ -37,21 +40,25 @@ export default async function TrainingLogPage(props: PageProps<'/training/log'>)
   const day = plan.days.find((d) => d.day === dayKeyOf(date))!
 
   const week = { from: weekStart(date), to: addDays(weekStart(date), 6) }
-  const month = { from: monthStart(date), to: monthEnd(date) }
-  const [logged, log, firstLogDate, weekSetCounts, gender] = await Promise.all([
-    getLoggedDays(session.userId, week.from < month.from ? week.from : month.from, week.to > month.to ? week.to : month.to),
+  const monthRange = { from: monthStart(date), to: monthEnd(date) }
+  const [logged, log, firstLogDate, weekSetCounts, gender, { locale, t }] = await Promise.all([
+    getLoggedDays(session.userId, week.from < monthRange.from ? week.from : monthRange.from, week.to > monthRange.to ? week.to : monthRange.to),
     getWorkoutLog(session.userId, date),
     getFirstLogDate(session.userId),
     getSetCounts(session.userId, week.from, week.to),
     getGender(session.userId),
+    getI18n(),
   ])
+  const text = planText(locale)
+  const month = Number(date.slice(5, 7))
 
   // 還沒有任何紀錄時，從今天開始算
   const trackingStart = firstLogDate ?? today
   const weekStats = computeCompletion(plan, week, trackingStart, today, logged)
-  const monthStats = computeCompletion(plan, month, trackingStart, today, logged)
+  const monthStats = computeCompletion(plan, monthRange, trackingStart, today, logged)
   const dayStats = monthStats.days.find((d) => d.date === date)!
   const muscleVolumes = computeMuscleVolume(plan, weekStats.days, weekSetCounts)
+  const completed = t.log.completed(dayStats.completedSets, dayStats.plannedSets)
 
   const setValue = (exerciseIndex: number, setNumber: number) =>
     log?.sets.find((s) => s.exerciseIndex === exerciseIndex && s.setNumber === setNumber)
@@ -61,12 +68,12 @@ export default async function TrainingLogPage(props: PageProps<'/training/log'>)
       <section className="bg-stone">
         <div className="mx-auto max-w-6xl px-6 py-12">
           <p className="text-xs font-semibold uppercase tracking-[0.3em] text-muted">Training log</p>
-          <h1 className="mt-3 text-3xl font-bold sm:text-5xl">訓練紀錄</h1>
-          <p className="mt-4 text-base">依照日期登記每組的重量與次數，填了次數的組即算完成。</p>
+          <h1 className="mt-3 text-3xl font-bold sm:text-5xl">{t.log.title}</h1>
+          <p className="mt-4 text-base">{t.log.intro}</p>
           <dl className="mt-8 grid max-w-2xl grid-cols-3 gap-6">
-            <Stat label="本週達成率" value={formatRate(weekStats.rate)} />
-            <Stat label={`${Number(date.slice(5, 7))} 月達成率`} value={formatRate(monthStats.rate)} />
-            <Stat label={`${Number(date.slice(5, 7))} 月訓練天數`} value={`${monthStats.trainedDays} / ${monthStats.trainingDays}`} />
+            <Stat label={t.log.weekRate} value={formatRate(weekStats.rate)} />
+            <Stat label={t.log.monthRate(month)} value={formatRate(monthStats.rate)} />
+            <Stat label={t.log.monthDays(month)} value={`${monthStats.trainedDays} / ${monthStats.trainingDays}`} />
           </dl>
         </div>
       </section>
@@ -75,14 +82,14 @@ export default async function TrainingLogPage(props: PageProps<'/training/log'>)
         <section aria-labelledby="calendar-heading">
           <div className="flex items-center justify-between">
             <h2 id="calendar-heading" className="text-xl font-bold">
-              {date.slice(0, 4)} 年 {Number(date.slice(5, 7))} 月
+              {t.log.monthTitle(date.slice(0, 4), month)}
             </h2>
             <div className="flex gap-4 text-sm font-semibold">
               <Link href={`/training/log?date=${addMonths(date, -1)}`} className="underline-offset-4 hover:underline">
-                ← 上個月
+                {t.log.prevMonth}
               </Link>
               <Link href={`/training/log?date=${addMonths(date, 1)}`} className="underline-offset-4 hover:underline">
-                下個月 →
+                {t.log.nextMonth}
               </Link>
             </div>
           </div>
@@ -90,47 +97,48 @@ export default async function TrainingLogPage(props: PageProps<'/training/log'>)
           <div className="mt-6 grid grid-cols-7 gap-1 text-center">
             {DAY_KEYS.map((k) => (
               <div key={k} className="pb-2 text-xs text-muted">
-                {DAY_LABELS[k].slice(1)}
+                {t.daysShort[k]}
               </div>
             ))}
-            {Array.from({ length: DAY_KEYS.indexOf(dayKeyOf(month.from)) }, (_, i) => (
+            {Array.from({ length: DAY_KEYS.indexOf(dayKeyOf(monthRange.from)) }, (_, i) => (
               <div key={`blank-${i}`} />
             ))}
             {monthStats.days.map((d) => (
-              <CalendarCell key={d.date} day={d} selected={d.date === date} isToday={d.date === today} />
+              <CalendarCell key={d.date} day={d} selected={d.date === date} isToday={d.date === today} t={t} />
             ))}
           </div>
 
           <ul className="mt-6 flex flex-wrap gap-x-5 gap-y-2 text-xs text-muted">
-            <Legend className="bg-foreground" label="完成" />
-            <Legend className="bg-stone" label="部分完成" />
-            <Legend className="border border-accent" label="未訓練" />
-            <Legend className="border border-line" label="休息／未開始／未來" />
+            <Legend className="bg-foreground" label={t.log.legendDone} />
+            <Legend className="bg-stone" label={t.log.legendPartial} />
+            <Legend className="border border-accent" label={t.log.legendMissed} />
+            <Legend className="border border-line" label={t.log.legendOther} />
           </ul>
 
           <MuscleMap
             volumes={muscleVolumes}
-            weekLabel={`${formatDate(week.from)}–${formatDate(week.to)} 這週`}
+            weekLabel={t.log.weekLabel(formatDate(week.from), formatDate(week.to))}
             gender={gender ?? 'male'}
+            t={t}
           />
         </section>
 
         <section aria-labelledby="log-heading">
           <div className="flex flex-wrap items-baseline justify-between gap-3">
             <h2 id="log-heading" className="text-2xl font-bold">
-              {formatDate(date)}（{DAY_LABELS[day.day]}）・{day.title}
+              {t.log.dayHeading(formatDate(date), t.days[day.day], text.day(day.day).title)}
             </h2>
-            <nav className="flex gap-4 text-sm font-semibold" aria-label="切換日期">
+            <nav className="flex gap-4 text-sm font-semibold" aria-label={t.log.switchDate}>
               <Link href={`/training/log?date=${addDays(date, -1)}`} className="underline-offset-4 hover:underline">
-                ← 前一天
+                {t.log.prevDay}
               </Link>
               {date !== today && (
                 <Link href="/training/log" className="underline-offset-4 hover:underline">
-                  今天
+                  {t.common.today}
                 </Link>
               )}
               <Link href={`/training/log?date=${addDays(date, 1)}`} className="underline-offset-4 hover:underline">
-                後一天 →
+                {t.log.nextDay}
               </Link>
             </nav>
           </div>
@@ -139,21 +147,23 @@ export default async function TrainingLogPage(props: PageProps<'/training/log'>)
             <SavedToast
               key={savedAt}
               savedAt={savedAt}
-              message={`已儲存 ${formatDate(date)} 的訓練紀錄・${dayStats.completedSets} / ${dayStats.plannedSets} 組（${formatRate(dayStats.rate)}）`}
+              message={t.log.savedToast(formatDate(date), dayStats.completedSets, dayStats.plannedSets, formatRate(dayStats.rate))}
             />
           )}
 
           {day.exercises.length === 0 ? (
-            <p className="mt-6 bg-stone px-6 py-10 text-center text-muted">休息日，不需要登記訓練。</p>
+            <p className="mt-6 bg-stone px-6 py-10 text-center text-muted">{t.log.restDay}</p>
           ) : date > today ? (
-            <p className="mt-6 bg-stone px-6 py-10 text-center text-muted">還不能登記未來的訓練。</p>
+            <p className="mt-6 bg-stone px-6 py-10 text-center text-muted">{t.log.future}</p>
           ) : (
             <RestTimerProvider>
               {/* key：切換日期時重新掛載，讓 defaultValue 換成該日期的紀錄 */}
               <form key={date} action={saveWorkoutLogAction} className="mt-6 pb-28">
                 <input type="hidden" name="date" value={date} />
                 <p className="text-sm">
-                  已完成 <span className="font-bold tabular-nums">{dayStats.completedSets}</span> / {dayStats.plannedSets} 組・
+                  {completed.before}
+                  <span className="font-bold tabular-nums">{completed.done}</span>
+                  {completed.after}
                   <span className="font-bold">{formatRate(dayStats.rate)}</span>
                 </p>
 
@@ -163,22 +173,22 @@ export default async function TrainingLogPage(props: PageProps<'/training/log'>)
                       <div className="flex items-baseline justify-between gap-4 border-b border-foreground pb-2">
                         <h3 className="font-bold">
                           <span className="mr-3 text-sm text-muted">{String(i + 1).padStart(2, '0')}</span>
-                          {e.name}
+                          {text.exercise(e.name)}
                         </h3>
                         <span className="flex shrink-0 items-center gap-3">
-                          <span className="text-sm text-muted">{formatVolume(e)}</span>
-                          <RestButton label={e.name} seconds={e.restSeconds} />
+                          <span className="text-sm text-muted">{t.training.volume(e.sets, e.reps, e.perSide)}</span>
+                          <RestButton label={text.exercise(e.name)} seconds={e.restSeconds} />
                         </span>
                       </div>
                       <div className="mt-2 grid grid-cols-[3.5rem_1fr_1fr] items-center gap-x-3 gap-y-2 text-sm">
                         <span />
-                        <span className="text-xs text-muted">重量（kg）</span>
-                        <span className="text-xs text-muted">次數</span>
+                        <span className="text-xs text-muted">{t.log.weight}</span>
+                        <span className="text-xs text-muted">{t.log.reps}</span>
                         {Array.from({ length: e.sets }, (_, s) => {
                           const n = s + 1
                           const prev = setValue(i, n)
                           return (
-                            <SetRow key={n} exerciseIndex={i} setNumber={n} reps={e.reps} prev={prev} />
+                            <SetRow key={n} exerciseIndex={i} setNumber={n} reps={e.reps} prev={prev} t={t} />
                           )
                         })}
                       </div>
@@ -187,13 +197,13 @@ export default async function TrainingLogPage(props: PageProps<'/training/log'>)
                 </ol>
 
                 <label className="mt-8 block">
-                  <span className="text-xs font-semibold uppercase tracking-wider">備註</span>
+                  <span className="text-xs font-semibold uppercase tracking-wider">{t.log.notes}</span>
                   <textarea
                     name="notes"
                     rows={3}
                     defaultValue={log?.notes ?? ''}
-                    placeholder="今天的狀態、睡眠、哪裡不舒服…"
-                    className="mt-2 w-full border border-line bg-white px-4 py-3 text-sm focus:border-foreground focus:outline-none"
+                    placeholder={t.log.notesPlaceholder}
+                    className="mt-2 w-full border border-line bg-surface px-4 py-3 text-sm focus:border-foreground focus:outline-none"
                   />
                 </label>
 
@@ -212,17 +222,19 @@ function SetRow({
   setNumber,
   reps,
   prev,
+  t,
 }: {
+  t: Messages
   exerciseIndex: number
   setNumber: number
   reps: string
   prev?: { weightKg: number | null; reps: number }
 }) {
   const inputClass =
-    'w-full border border-line bg-white px-3 py-2 text-sm tabular-nums placeholder-muted/60 focus:border-foreground focus:outline-none'
+    'w-full border border-line bg-surface px-3 py-2 text-sm tabular-nums placeholder-muted/60 focus:border-foreground focus:outline-none'
   return (
     <>
-      <span className="text-muted">第 {setNumber} 組</span>
+      <span className="text-muted">{t.log.setN(setNumber)}</span>
       <input
         name={`weight-${exerciseIndex}-${setNumber}`}
         type="number"
@@ -231,7 +243,7 @@ function SetRow({
         max={1000}
         step={0.25}
         defaultValue={prev?.weightKg ?? ''}
-        aria-label={`第 ${setNumber} 組重量`}
+        aria-label={t.log.setWeight(setNumber)}
         className={inputClass}
       />
       <input
@@ -243,7 +255,7 @@ function SetRow({
         step={1}
         defaultValue={prev?.reps ?? ''}
         placeholder={reps}
-        aria-label={`第 ${setNumber} 組次數`}
+        aria-label={t.log.setReps(setNumber)}
         className={inputClass}
       />
     </>
@@ -251,7 +263,7 @@ function SetRow({
 }
 
 const cellStyles: Record<DayStatus, string> = {
-  done: 'bg-foreground text-white',
+  done: 'bg-foreground text-background',
   partial: 'bg-stone',
   missed: 'border border-accent text-accent',
   rest: 'border border-line text-muted',
@@ -259,7 +271,7 @@ const cellStyles: Record<DayStatus, string> = {
   future: 'border border-line text-muted/60',
 }
 
-function CalendarCell({ day, selected, isToday }: { day: DayCompletion; selected: boolean; isToday: boolean }) {
+function CalendarCell({ day, selected, isToday, t }: { day: DayCompletion; selected: boolean; isToday: boolean; t: Messages }) {
   return (
     <Link
       href={`/training/log?date=${day.date}`}
@@ -269,8 +281,8 @@ function CalendarCell({ day, selected, isToday }: { day: DayCompletion; selected
       } ${selected ? 'outline-2 outline-offset-2 outline-foreground' : ''}`}
     >
       <span className="font-semibold tabular-nums">{Number(day.date.slice(8))}</span>
-      <span className="text-[10px] leading-tight">{day.status === 'rest' ? '休' : day.rate === null ? '' : formatRate(day.rate)}</span>
-      {isToday && <span className="absolute right-1 top-1 h-1.5 w-1.5 rounded-full bg-accent" aria-label="今天" />}
+      <span className="text-[10px] leading-tight">{day.status === 'rest' ? t.log.restShort : day.rate === null ? '' : formatRate(day.rate)}</span>
+      {isToday && <span className="absolute right-1 top-1 h-1.5 w-1.5 rounded-full bg-accent" aria-label={t.common.today} />}
     </Link>
   )
 }

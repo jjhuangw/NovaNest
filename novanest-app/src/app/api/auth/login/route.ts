@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
   const body = await req.json()
   const parsed = schema.safeParse(body)
   if (!parsed.success) {
-    return NextResponse.json({ error: 'Invalid input' }, { status: 400 })
+    return NextResponse.json({ error: 'invalid_credentials' }, { status: 400 })
   }
 
   const { email, password } = parsed.data
@@ -25,12 +25,12 @@ export async function POST(req: NextRequest) {
     where: (u) => eq(u.email, email),
   })
   if (!user) {
-    return NextResponse.json({ error: 'Invalid email or password' }, { status: 401 })
+    return NextResponse.json({ error: 'invalid_credentials' }, { status: 401 })
   }
 
   const valid = await bcrypt.compare(password, user.passwordHash)
   if (!valid) {
-    return NextResponse.json({ error: 'Invalid email or password' }, { status: 401 })
+    return NextResponse.json({ error: 'invalid_credentials' }, { status: 401 })
   }
 
   const token = await signToken({ userId: user.id, username: user.username })

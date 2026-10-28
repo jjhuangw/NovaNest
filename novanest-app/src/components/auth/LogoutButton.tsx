@@ -1,6 +1,10 @@
 'use client'
 
+import { useI18n } from '@/lib/i18n/client'
+
 export default function LogoutButton() {
+  const { t } = useI18n()
+
   async function handleLogout() {
     await fetch('/api/auth/logout', { method: 'POST' })
     window.location.href = '/login'
@@ -9,9 +13,9 @@ export default function LogoutButton() {
   return (
     <button
       onClick={handleLogout}
-      className="text-sm text-muted underline-offset-4 transition-colors hover:text-foreground hover:underline"
+      className="whitespace-nowrap text-sm text-muted underline-offset-4 transition-colors hover:text-foreground hover:underline"
     >
-      登出
+      {t.nav.logout}
     </button>
   )
 }
