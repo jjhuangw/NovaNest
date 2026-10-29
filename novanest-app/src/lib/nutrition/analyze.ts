@@ -31,7 +31,11 @@ const outputSchema = z.object({
 
 const COMMON = `Report every nutrient for the stated amount: kcal, protein/carbs/fat/fiber/sugar in grams, sodium in milligrams. Use null for fiber, sugar or sodium only when you truly cannot tell. "note" is one short sentence for the user (e.g. what was hard to judge), or null.`
 
-const PROMPTS: Record<AnalyzeMode, string> = {
+const PROMPTS: Record<AnalyzeMode | 'name', string> = {
+  name: `You estimate the nutrition of a food the user names, for a fitness app's food log.
+Return exactly one item for ONE typical serving as commonly eaten in Taiwan (e.g. "漢堡" means one ordinary fast-food hamburger). If the user gives a portion, use that portion instead. Keep the user's food name in "name" (fix only obvious typos) and describe the serving you assumed in "amount" (e.g. "1 個，約 200 g"). For a branded or chain item, use that product's published values if you know them.
+Set "servingsPerPackage" to null. If the text is not a food or drink, set "recognized" to false and return no items.
+${COMMON}`,
   photo: `You estimate the nutrition of a meal from a photo for a fitness app.
 List each distinct food or drink you can see as its own item, with the portion you estimate in "amount" (e.g. "1 bowl, about 200 g"). Base the numbers on typical recipes and portion sizes in Taiwan unless the photo suggests otherwise, and account for visible oil, sauces and drinks. If the user adds a description, trust it over what you see for portions and ingredients.
 Set "servingsPerPackage" to null. If the photo shows no food, set "recognized" to false and return no items.
@@ -63,32 +67,46 @@ export async function analyzeFoodImage(input: {
   hint: string | null
   locale: Locale
 }): Promise<AnalyzeResult> {
-  if (!isAnalyzerConfigured()) return { ok: false, reason: 'unconfigured' }
-  client ??= new Anthropic()
-
   const text = [LANGUAGE[input.locale], input.hint ? `The user's description: ${input.hint}` : null]
     .filter(Boolean)
     .join('\n')
+
+  return requestItems(PROMPTS[input.mode], 'medium', [
+    { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: Buffer.from(input.jpeg).toString('base64') } },
+    { type: 'text', text },
+  ])
+}
+
+// 依食物名稱估算一份的營養素，給手動輸入時自動帶入
+export async function estimateFoodByName(input: { name: string; amount: string | null; locale: Locale }): Promise<AnalyzeResult> {
+  const text = [
+    LANGUAGE[input.locale],
+    `Food: ${input.name}`,
+    input.amount ? `Portion: ${input.amount}` : null,
+  ]
+    .filter(Boolean)
+    .join('\n')
+  // 只是查一般份量的數值，用較低的 effort 讓回應快一點
+  return requestItems(PROMPTS.name, 'low', [{ type: 'text', text }])
+}
+
+type Content = Anthropic.Beta.BetaContentBlockParam[]
+
+async function requestItems(system: string, effort: 'low' | 'medium', content: Content): Promise<AnalyzeResult> {
+  if (!isAnalyzerConfigured()) return { ok: false, reason: 'unconfigured' }
+  client ??= new Anthropic()
 
   let response
   try {
     response = await client.beta.messages.parse({
       model: MODEL,
       max_tokens: 16000,
-      output_config: { effort: 'medium', format: betaZodOutputFormat(outputSchema) },
+      output_config: { effort, format: betaZodOutputFormat(outputSchema) },
       // 被安全機制拒絕時，自動改由其他模型處理
       betas: ['server-side-fallback-2026-07-01'],
       fallbacks: 'default',
-      system: PROMPTS[input.mode],
-      messages: [
-        {
-          role: 'user',
-          content: [
-            { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: Buffer.from(input.jpeg).toString('base64') } },
-            { type: 'text', text },
-          ],
-        },
-      ],
+      system,
+      messages: [{ role: 'user', content }],
     })
   } catch (e) {
     console.error('Food analysis request failed', e)

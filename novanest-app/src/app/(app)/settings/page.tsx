@@ -5,14 +5,16 @@ import { SavedToast, SubmitButton } from '@/components/form-feedback'
 import { isTheme, THEME_COOKIE } from '@/lib/i18n/config'
 import { getI18n } from '@/lib/i18n/server'
 import { todayISO } from '@/lib/training/dates'
-import { BODY_LIMITS, getBodyData, getGender } from '@/lib/user/profile'
-import { updateBodyDataAction, updateGenderAction } from './actions'
+import { BODY_LIMITS, getBodyData } from '@/lib/user/profile'
+import { updateProfileAction } from './actions'
+import { LanguageSelect, ThemeSelect, segmentClass } from './preferences'
+
+export const instant = false
 
 const inputClass =
   'block min-h-11 w-full min-w-0 border border-line bg-surface px-3 py-2.5 text-sm tabular-nums focus:border-foreground focus:outline-none'
-import { LanguageSelect, ThemeSelect } from './preferences'
-
-export const instant = false
+// 不轉大寫，避免單位 cm、kg 變成 CM、KG
+const fieldLabel = 'mb-2 block text-xs font-semibold tracking-wider'
 
 export default async function SettingsPage(props: PageProps<'/settings'>) {
   const session = await getSession()
@@ -20,21 +22,17 @@ export default async function SettingsPage(props: PageProps<'/settings'>) {
 
   const params = await props.searchParams
   const savedAt = typeof params.saved === 'string' ? params.saved : null
-  const bodyError = params.error === 'body'
-  const [gender, body, { t }, cookieStore] = await Promise.all([
-    getGender(session.userId),
-    getBodyData(session.userId),
-    getI18n(),
-    cookies(),
-  ])
+  const invalid = params.error === 'body'
+  const [body, { t }, cookieStore] = await Promise.all([getBodyData(session.userId), getI18n(), cookies()])
   const thisYear = Number(todayISO().slice(0, 4))
   const savedTheme = cookieStore.get(THEME_COOKIE)?.value
   const theme = isTheme(savedTheme) ? savedTheme : 'system'
+  const ts = t.settings
 
-  const options = [
-    { value: 'male', label: t.settings.male },
-    { value: 'female', label: t.settings.female },
-    { value: '', label: t.settings.unspecified, hint: t.settings.unspecifiedHint },
+  const genders = [
+    { value: 'male', label: ts.male },
+    { value: 'female', label: ts.female },
+    { value: '', label: ts.unspecified },
   ]
 
   return (
@@ -42,46 +40,32 @@ export default async function SettingsPage(props: PageProps<'/settings'>) {
       <section className="bg-stone">
         <div className="mx-auto max-w-6xl px-6 py-12">
           <p className="text-xs font-semibold uppercase tracking-[0.3em] text-muted">Settings</p>
-          <h1 className="mt-3 text-3xl font-bold sm:text-5xl">{t.settings.title}</h1>
+          <h1 className="mt-3 text-3xl font-bold sm:text-5xl">{ts.title}</h1>
           <p className="mt-4 text-base">{session.username}</p>
         </div>
       </section>
 
-      <section className="mx-auto grid max-w-6xl gap-12 px-6 py-12 md:grid-cols-2 lg:grid-cols-3">
-        {savedAt && <SavedToast key={savedAt} savedAt={savedAt} message={t.settings.saved} />}
-        <LanguageSelect />
-        <ThemeSelect initial={theme} />
-        <form action={updateGenderAction}>
-          <fieldset>
-            <legend className="text-xs font-semibold uppercase tracking-wider">{t.settings.gender}</legend>
-            <p className="mt-1 text-sm text-muted">{t.settings.genderHint}</p>
-            <div className="mt-4 divide-y divide-line border-y border-line">
-              {options.map((o) => (
-                <label key={o.value} className="flex cursor-pointer items-center gap-3 py-3.5">
-                  <input
-                    type="radio"
-                    name="gender"
-                    value={o.value}
-                    defaultChecked={(gender ?? '') === o.value}
-                    className="h-4 w-4 accent-foreground"
-                  />
-                  <span>
-                    <span className="font-semibold">{o.label}</span>
-                    {o.hint && <span className="block text-xs text-muted">{o.hint}</span>}
-                  </span>
-                </label>
-              ))}
-            </div>
-          </fieldset>
-          <SubmitButton label={t.settings.save} />
-        </form>
-        <form action={updateBodyDataAction}>
-          <fieldset>
-            <legend className="text-xs font-semibold uppercase tracking-wider">{t.settings.body}</legend>
-            <p className="mt-1 text-sm text-muted">{t.settings.bodyHint}</p>
-            <div className="mt-4 space-y-4">
-              <label className="block">
-                <span className="mb-1.5 block text-sm font-semibold">{t.settings.height}</span>
+      {savedAt && <SavedToast key={savedAt} savedAt={savedAt} message={ts.saved} />}
+
+      <div className="mx-auto max-w-6xl px-6">
+        <Section title={ts.profile} hint={ts.profileHint}>
+          <form action={updateProfileAction}>
+            <fieldset>
+              <legend className={fieldLabel}>{ts.gender}</legend>
+              <div className="grid grid-cols-3 gap-2">
+                {genders.map((o) => (
+                  <label key={o.value}>
+                    <input type="radio" name="gender" value={o.value} defaultChecked={(body.gender ?? '') === o.value} className="peer sr-only" />
+                    <span className={segmentClass}>{o.label}</span>
+                  </label>
+                ))}
+              </div>
+              <p className="mt-2 text-xs text-muted">{ts.genderHint}</p>
+            </fieldset>
+
+            <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-3">
+              <label className="block min-w-0">
+                <span className={fieldLabel}>{ts.height}</span>
                 <input
                   name="heightCm"
                   type="number"
@@ -93,8 +77,8 @@ export default async function SettingsPage(props: PageProps<'/settings'>) {
                   className={inputClass}
                 />
               </label>
-              <label className="block">
-                <span className="mb-1.5 block text-sm font-semibold">{t.settings.weight}</span>
+              <label className="block min-w-0">
+                <span className={fieldLabel}>{ts.weight}</span>
                 <input
                   name="weightKg"
                   type="number"
@@ -105,12 +89,9 @@ export default async function SettingsPage(props: PageProps<'/settings'>) {
                   defaultValue={body.weightKg ?? ''}
                   className={inputClass}
                 />
-                {body.weighedOn && (
-                  <span className="mt-1 block text-xs text-muted">{t.settings.weighedOn(body.weighedOn.replaceAll('-', '/'))}</span>
-                )}
               </label>
-              <label className="block">
-                <span className="mb-1.5 block text-sm font-semibold">{t.settings.birthYear}</span>
+              <label className="block min-w-0">
+                <span className={fieldLabel}>{ts.birthYear}</span>
                 <input
                   name="birthYear"
                   type="number"
@@ -123,11 +104,38 @@ export default async function SettingsPage(props: PageProps<'/settings'>) {
                 />
               </label>
             </div>
-          </fieldset>
-          {bodyError && <p className="mt-4 border-l-2 border-accent bg-stone px-3 py-2 text-sm text-accent">{t.settings.bodyInvalid}</p>}
-          <SubmitButton label={t.settings.saveBody} />
-        </form>
-      </section>
+            <p className="mt-2 text-xs text-muted">
+              {ts.bodyHint}
+              {body.weighedOn && <span className="block">{ts.weighedOn(body.weighedOn.replaceAll('-', '/'))}</span>}
+            </p>
+
+            {invalid && <p className="mt-6 border-l-2 border-accent bg-stone px-3 py-2 text-sm text-accent">{ts.bodyInvalid}</p>}
+            <div className="mt-2">
+              <SubmitButton label={ts.save} />
+            </div>
+          </form>
+        </Section>
+
+        <Section title={ts.preferences} hint={ts.preferencesHint}>
+          <div className="space-y-8">
+            <LanguageSelect />
+            <ThemeSelect initial={theme} />
+          </div>
+        </Section>
+      </div>
     </div>
+  )
+}
+
+// 左邊為區塊標題與說明，右邊為內容；手機上改為上下排列
+function Section({ title, hint, children }: { title: string; hint: string; children: React.ReactNode }) {
+  return (
+    <section className="grid gap-6 border-b border-line py-12 last:border-b-0 md:grid-cols-[minmax(0,1fr)_minmax(0,2fr)] md:gap-12">
+      <div>
+        <h2 className="text-xl font-bold">{title}</h2>
+        <p className="mt-2 text-sm text-muted">{hint}</p>
+      </div>
+      <div className="min-w-0">{children}</div>
+    </section>
   )
 }

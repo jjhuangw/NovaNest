@@ -21,7 +21,7 @@ import {
 } from '@/lib/nutrition/nutrients'
 import { checkImage, compressImage, imageProblemMessage } from '@/lib/photos/compress'
 import { ACCEPT_ATTR } from '@/lib/photos/limits'
-import { analyzeFoodAction, saveFoodAction } from './actions'
+import { analyzeFoodAction, estimateFoodAction, saveFoodAction } from './actions'
 
 // 編輯中的一項食物：營養素為「每份」的值，存檔時才乘上份數
 interface Draft {
@@ -30,6 +30,8 @@ interface Draft {
   amount: string
   servings: string
   values: Record<NutrientKey, string>
+  // 最近一次依名稱帶入營養素時的名稱，避免同一個名稱重複查詢
+  estimatedFor: string | null
 }
 
 let nextKey = 0
@@ -41,27 +43,28 @@ function emptyDraft(): Draft {
     amount: '',
     servings: '1',
     values: { kcal: '', proteinG: '', carbsG: '', fatG: '', fiberG: '', sugarG: '', sodiumMg: '' },
+    estimatedFor: null,
+  }
+}
+
+function valuesFrom(item: FoodItem): Record<NutrientKey, string> {
+  const str = (v: number | null) => (v === null ? '' : String(v))
+  return {
+    kcal: str(item.kcal),
+    proteinG: str(item.proteinG),
+    carbsG: str(item.carbsG),
+    fatG: str(item.fatG),
+    fiberG: str(item.fiberG),
+    sugarG: str(item.sugarG),
+    sodiumMg: str(item.sodiumMg),
   }
 }
 
 function draftFrom(item: FoodItem): Draft {
-  const str = (v: number | null) => (v === null ? '' : String(v))
-  return {
-    key: nextKey++,
-    name: item.name,
-    amount: item.amount ?? '',
-    servings: '1',
-    values: {
-      kcal: str(item.kcal),
-      proteinG: str(item.proteinG),
-      carbsG: str(item.carbsG),
-      fatG: str(item.fatG),
-      fiberG: str(item.fiberG),
-      sugarG: str(item.sugarG),
-      sodiumMg: str(item.sodiumMg),
-    },
-  }
+  return { key: nextKey++, name: item.name, amount: item.amount ?? '', servings: '1', values: valuesFrom(item), estimatedFor: null }
 }
+
+const hasMacros = (d: Draft) => MACROS.some((k) => d.values[k].trim() !== '')
 
 function parseNumber(s: string): number | null {
   if (s.trim() === '') return null
@@ -113,6 +116,7 @@ export default function AddFoodForm({ date, defaultMeal }: { date: string; defau
   const [savedCount, setSavedCount] = useState(0)
   const [analyzing, startAnalyze] = useTransition()
   const [saving, startSave] = useTransition()
+  const [estimatingKey, setEstimatingKey] = useState<number | null>(null)
 
   // 手動輸入直接顯示編輯表單；照片模式要等分析完成
   const editing = mode === 'manual' || analyzed !== null
@@ -173,6 +177,44 @@ export default function AddFoodForm({ date, defaultMeal }: { date: string; defau
       setDrafts(result.items.map(draftFrom))
       setAnalyzed({ note: result.note, servingsPerPackage: result.servingsPerPackage })
     })
+  }
+
+  // 依食物名稱帶入一般份量的營養素；有填份量時以該份量估算
+  // auto：離開欄位時自動觸發，失敗時不顯示錯誤（按按鈕才會顯示原因）
+  async function estimate(d: Draft, { auto = false } = {}) {
+    const name = d.name.trim()
+    if (!name) {
+      setError(t.errors.nameRequired)
+      return
+    }
+    if (estimatingKey !== null) return
+    if (!auto) setError(null)
+    setEstimatingKey(d.key)
+    try {
+      const result = await estimateFoodAction({ name, amount: d.amount })
+      if (!result.ok) {
+        if (!auto) setError(result.error)
+        update(d.key, { estimatedFor: name })
+        return
+      }
+      setDrafts((ds) =>
+        ds.map((x) =>
+          x.key === d.key
+            ? { ...x, amount: x.amount.trim() || (result.item.amount ?? ''), values: valuesFrom(result.item), estimatedFor: name }
+            : x,
+        ),
+      )
+    } catch {
+      if (!auto) setError(t.errors.failed)
+    } finally {
+      setEstimatingKey(null)
+    }
+  }
+
+  // 離開名稱欄位時，只在營養素都還空白、且這個名稱還沒查過時自動帶入，不會覆蓋已輸入的數值
+  function autoEstimate(d: Draft) {
+    const name = d.name.trim()
+    if (name && !hasMacros(d) && d.estimatedFor !== name) estimate(d, { auto: true })
   }
 
   function update(key: number, patch: Partial<Draft>) {
@@ -302,6 +344,9 @@ export default function AddFoodForm({ date, defaultMeal }: { date: string; defau
                 index={i}
                 canRemove={drafts.length > 1}
                 showServings={mode === 'label'}
+                estimating={estimatingKey === d.key}
+                onEstimate={() => estimate(d)}
+                onNameBlur={() => autoEstimate(d)}
                 t={t}
                 onChange={(patch) => update(d.key, patch)}
                 onValue={(k, v) => updateValue(d.key, k, v)}
@@ -356,6 +401,9 @@ function DraftEditor({
   index,
   canRemove,
   showServings,
+  estimating,
+  onEstimate,
+  onNameBlur,
   t,
   onChange,
   onValue,
@@ -365,6 +413,9 @@ function DraftEditor({
   index: number
   canRemove: boolean
   showServings: boolean
+  estimating: boolean
+  onEstimate: () => void
+  onNameBlur: () => void
   t: Messages['nutrition']
   onChange: (patch: Partial<Draft>) => void
   onValue: (key: NutrientKey, value: string) => void
@@ -383,17 +434,37 @@ function DraftEditor({
         )}
       </div>
       <div className="mt-2 grid gap-3 sm:grid-cols-[3fr_2fr]">
-        <label className="block min-w-0">
-          <span className={labelClass}>{t.itemName}</span>
-          <input
-            value={draft.name}
-            onChange={(e) => onChange({ name: e.target.value })}
-            maxLength={100}
-            required
-            placeholder={t.itemNamePlaceholder}
-            className={inputClass}
-          />
-        </label>
+        <div className="min-w-0">
+          <label htmlFor={`${id}-name`} className={labelClass}>
+            {t.itemName}
+          </label>
+          <div className="flex gap-2">
+            <input
+              id={`${id}-name`}
+              value={draft.name}
+              onChange={(e) => onChange({ name: e.target.value })}
+              onBlur={onNameBlur}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
+                  e.preventDefault()
+                  onEstimate()
+                }
+              }}
+              maxLength={100}
+              required
+              placeholder={t.itemNamePlaceholder}
+              className={inputClass}
+            />
+            <button
+              type="button"
+              onClick={onEstimate}
+              disabled={estimating || !draft.name.trim()}
+              className="shrink-0 border border-foreground px-3 text-xs font-semibold hover:bg-foreground hover:text-background disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-foreground"
+            >
+              {estimating ? t.estimating : t.estimate}
+            </button>
+          </div>
+        </div>
         <label className="block min-w-0">
           <span className={labelClass}>{t.amount}</span>
           <input
@@ -405,6 +476,10 @@ function DraftEditor({
           />
         </label>
       </div>
+
+      {draft.estimatedFor !== null && draft.estimatedFor === draft.name.trim() && hasMacros(draft) && (
+        <p className="mt-2 text-xs text-muted">{t.estimatedNote}</p>
+      )}
 
       <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
         {MACROS.map((k) => (

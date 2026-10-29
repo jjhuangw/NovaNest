@@ -9,8 +9,10 @@ import { useI18n } from '@/lib/i18n/client'
 // 語言名稱一律用該語言本身顯示
 const LOCALE_NAMES: Record<Locale, string> = { 'zh-TW': '繁體中文', en: 'English' }
 
-const optionClass = 'flex cursor-pointer items-center gap-3 py-3.5'
-const radioClass = 'h-4 w-4 accent-foreground'
+// 分段按鈕：搭配前一個 peer sr-only 的 radio 使用
+export const segmentClass =
+  'block cursor-pointer border border-line px-2 py-2.5 text-center text-sm font-semibold peer-checked:border-foreground peer-checked:bg-foreground peer-checked:text-background peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-disabled:cursor-wait peer-disabled:opacity-60'
+const legendClass = 'mb-2 block text-xs font-semibold uppercase tracking-wider'
 
 // 立即套用並記在 cookie，讓下次載入時 layout 的內嵌 script 能在繪製前套用
 function applyTheme(theme: Theme) {
@@ -30,14 +32,18 @@ export function ThemeSelect({ initial }: { initial: Theme }) {
   }
 
   return (
-    <Group legend={t.settings.theme} hint={t.settings.themeHint}>
-      {THEMES.map((value) => (
-        <label key={value} className={optionClass}>
-          <input type="radio" name="theme" checked={theme === value} onChange={() => choose(value)} className={radioClass} />
-          <span className="font-semibold">{t.settings.themes[value]}</span>
-        </label>
-      ))}
-    </Group>
+    <fieldset>
+      <legend className={legendClass}>{t.settings.theme}</legend>
+      <div className="grid grid-cols-3 gap-2">
+        {THEMES.map((value) => (
+          <label key={value}>
+            <input type="radio" name="theme" checked={theme === value} onChange={() => choose(value)} className="peer sr-only" />
+            <span className={segmentClass}>{t.settings.themes[value]}</span>
+          </label>
+        ))}
+      </div>
+      <p className="mt-2 text-xs text-muted">{t.settings.themeHint}</p>
+    </fieldset>
   )
 }
 
@@ -47,35 +53,28 @@ export function LanguageSelect() {
   const [pending, startTransition] = useTransition()
 
   return (
-    <Group legend={t.settings.language} hint={t.settings.languageHint}>
-      {LOCALES.map((value) => (
-        <label key={value} className={optionClass} lang={value}>
-          <input
-            type="radio"
-            name="locale"
-            checked={locale === value}
-            disabled={pending}
-            onChange={() =>
-              startTransition(async () => {
-                await setLocaleAction(value)
-                router.refresh()
-              })
-            }
-            className={radioClass}
-          />
-          <span className="font-semibold">{LOCALE_NAMES[value]}</span>
-        </label>
-      ))}
-    </Group>
-  )
-}
-
-function Group({ legend, hint, children }: { legend: string; hint: string; children: React.ReactNode }) {
-  return (
     <fieldset>
-      <legend className="text-xs font-semibold uppercase tracking-wider">{legend}</legend>
-      <p className="mt-1 text-sm text-muted">{hint}</p>
-      <div className="mt-4 divide-y divide-line border-y border-line">{children}</div>
+      <legend className={legendClass}>{t.settings.language}</legend>
+      <div className="grid grid-cols-2 gap-2">
+        {LOCALES.map((value) => (
+          <label key={value} lang={value}>
+            <input
+              type="radio"
+              name="locale"
+              checked={locale === value}
+              disabled={pending}
+              onChange={() =>
+                startTransition(async () => {
+                  await setLocaleAction(value)
+                  router.refresh()
+                })
+              }
+              className="peer sr-only"
+            />
+            <span className={segmentClass}>{LOCALE_NAMES[value]}</span>
+          </label>
+        ))}
+      </div>
     </fieldset>
   )
 }
