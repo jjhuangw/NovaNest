@@ -12,8 +12,18 @@ export function isISODate(value: unknown): value is string {
 }
 
 export function todayISO(timeZone = TIME_ZONE): string {
+  return isoDateOf(new Date(), timeZone)
+}
+
+// 某個時間點在指定時區的日期
+export function isoDateOf(date: Date, timeZone = TIME_ZONE): string {
   // en-CA 的日期格式即為 YYYY-MM-DD
-  return new Intl.DateTimeFormat('en-CA', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date())
+  return new Intl.DateTimeFormat('en-CA', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(date)
+}
+
+// 某個時間點在指定時區的小時（0–23）
+export function hourOf(date: Date, timeZone = TIME_ZONE): number {
+  return Number(new Intl.DateTimeFormat('en-US', { timeZone, hour: 'numeric', hourCycle: 'h23' }).format(date))
 }
 
 function toUTC(iso: string): Date {

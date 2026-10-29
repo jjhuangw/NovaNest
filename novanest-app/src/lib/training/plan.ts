@@ -30,6 +30,14 @@ export interface Guideline {
   items: string[]
 }
 
+// 課表對應的飲食策略，每日營養目標由此計算（見 lib/nutrition/targets.ts）
+export interface NutritionStrategy {
+  // 相對維持熱量的增減（kcal）：增肌為正、減脂為負
+  calorieAdjustment: number
+  proteinPerKg: number
+  fatPerKg: number
+}
+
 export interface TrainingPlan {
   title: string
   goal: string
@@ -37,6 +45,7 @@ export interface TrainingPlan {
   targetWeightKg: number
   daysPerWeek: number
   sessionLength: string
+  nutrition: NutritionStrategy
   days: TrainingDay[]
   guidelines: Guideline[]
   weeklyTracking: string[]
@@ -59,6 +68,8 @@ export const mockPlan: TrainingPlan = {
   targetWeightKg: 73,
   daysPerWeek: 5,
   sessionLength: '平日約 30 分鐘',
+  // 對應「增肌飲食」原則：熱量多 200–300 kcal、70 kg 時蛋白質約 120–140 g
+  nutrition: { calorieAdjustment: 250, proteinPerKg: 1.8, fatPerKg: 0.9 },
   days: [
     {
       day: 'mon',

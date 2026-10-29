@@ -10,6 +10,8 @@ export const users = pgTable('users', {
   passwordHash: text('password_hash').notNull(),
   // 'male' | 'female'；未設定時為 null，顯示時預設男性
   gender: text('gender'),
+  // 用來估算基礎代謝率；未設定時為 null
+  birthYear: integer('birth_year'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 }).enableRLS()
 
@@ -67,6 +69,31 @@ export const bodyPhotos = pgTable(
   (t) => [index('body_photos_user_taken_idx').on(t.userId, t.takenOn)],
 ).enableRLS()
 
+// 飲食紀錄：一列即一項食物，營養素一律存「實際吃下的總量」（已乘上份數）。
+// 照片只用來分析，不會儲存。
+export const foodEntries = pgTable(
+  'food_entries',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
+    date: date('date', { mode: 'string' }).notNull(),
+    meal: text('meal').notNull(),
+    // 'manual' | 'photo' | 'label'
+    source: text('source').notNull(),
+    name: text('name').notNull(),
+    amount: text('amount'),
+    kcal: numeric('kcal', { precision: 7, scale: 1 }).notNull(),
+    proteinG: numeric('protein_g', { precision: 6, scale: 1 }).notNull(),
+    carbsG: numeric('carbs_g', { precision: 6, scale: 1 }).notNull(),
+    fatG: numeric('fat_g', { precision: 6, scale: 1 }).notNull(),
+    fiberG: numeric('fiber_g', { precision: 6, scale: 1 }),
+    sugarG: numeric('sugar_g', { precision: 6, scale: 1 }),
+    sodiumMg: numeric('sodium_mg', { precision: 7, scale: 0 }),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+  },
+  (t) => [index('food_entries_user_date_idx').on(t.userId, t.date)],
+).enableRLS()
+
 export type User = typeof users.$inferSelect
 export type NewUser = typeof users.$inferInsert
 export type BodyStats = typeof bodyStats.$inferSelect
@@ -74,3 +101,4 @@ export type NewBodyStats = typeof bodyStats.$inferInsert
 export type WorkoutLog = typeof workoutLogs.$inferSelect
 export type SetLog = typeof setLogs.$inferSelect
 export type BodyPhoto = typeof bodyPhotos.$inferSelect
+export type FoodEntry = typeof foodEntries.$inferSelect

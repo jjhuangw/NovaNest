@@ -9,6 +9,10 @@ import { addDays, formatDate, todayISO, todayKey, weekStart } from '@/lib/traini
 import { computeCompletion, formatRate } from '@/lib/training/completion'
 import { getFirstLogDate, getLoggedDays } from '@/lib/training/logs'
 import { countPhotos } from '@/lib/photos/photos'
+import { dailyTotals } from '@/lib/nutrition/entries'
+import { formatAmount } from '@/lib/nutrition/nutrients'
+import { bodyProfileFrom, dayTargets } from '@/lib/nutrition/targets'
+import { getBodyData } from '@/lib/user/profile'
 
 export const instant = false
 
@@ -21,18 +25,31 @@ export default async function DashboardPage() {
   const today = mockPlan.days.find((d) => d.day === todayKey())!
   const todayDate = todayISO()
   const week = { from: weekStart(todayDate), to: addDays(weekStart(todayDate), 6) }
-  const [logged, firstLogDate, photoStats, { locale, t }] = await Promise.all([
+  const [logged, firstLogDate, photoStats, foodTotals, body, { locale, t }] = await Promise.all([
     getLoggedDays(session.userId, week.from, week.to),
     getFirstLogDate(session.userId),
     countPhotos(session.userId),
+    dailyTotals(session.userId, todayDate, todayDate),
+    getBodyData(session.userId),
     getI18n(),
   ])
   const text = planText(locale)
+  const food = foodTotals.get(todayDate)
+  const foodTargets = dayTargets(mockPlan, today.day, bodyProfileFrom(body, mockPlan, todayDate))
   const nutritionTile: Tile = {
     title: t.dashboard.nutritionTitle,
-    subtitle: t.dashboard.nutritionSubtitle,
+    subtitle: food
+      ? t.dashboard.nutritionProgress(
+          formatAmount(food.kcal, 'kcal'),
+          formatAmount(foodTargets.kcal, 'kcal'),
+          formatAmount(food.proteinG, 'proteinG'),
+          String(foodTargets.proteinG),
+        )
+      : t.dashboard.nutritionSubtitle,
     image: '/images/nutrition.jpg',
     alt: t.dashboard.nutritionAlt,
+    href: '/nutrition',
+    cta: t.dashboard.nutritionCta,
   }
   const photoTile: Tile = {
     title: t.dashboard.photosTitle,

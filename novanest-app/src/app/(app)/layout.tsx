@@ -23,6 +23,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const links = [
     { href: '/training', label: t.nav.plan },
     { href: '/training/log', label: t.nav.log },
+    { href: '/nutrition', label: t.nav.nutrition },
     { href: '/progress', label: t.nav.progress },
   ]
 
@@ -53,7 +54,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             </div>
           </div>
           {/* 手機：主要頁面放在第二列，避免擠在一起 */}
-          <div className="grid grid-cols-3 border-t border-line text-sm sm:hidden">
+          <div className="grid grid-cols-4 border-t border-line text-sm sm:hidden">
             {links.map((l) => (
               <NavLink key={l.href} href={l.href} variant="tab">
                 {l.label}

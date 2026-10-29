@@ -3,56 +3,16 @@
 import { useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { SavedToast } from '@/components/form-feedback'
-import {
-  ACCEPT_ATTR,
-  ACCEPTED_TYPES,
-  formatMB,
-  MAX_EDGE,
-  MAX_ORIGINAL_BYTES,
-  MAX_ORIGINAL_PIXELS,
-  MAX_UPLOAD_BYTES,
-  MIN_EDGE,
-} from '@/lib/photos/limits'
+import { checkImage, compressImage as compress, imageProblemMessage } from '@/lib/photos/compress'
+import { ACCEPT_ATTR } from '@/lib/photos/limits'
 import { POSES } from '@/lib/photos/poses'
 import { useI18n } from '@/lib/i18n/client'
 import type { Messages } from '@/lib/i18n/messages'
 import { uploadPhotoAction } from './actions'
 
-// 選取檔案時就檢查格式、大小與尺寸，回傳錯誤訊息；通過時回傳 null
 async function validate(file: File, t: Messages['upload']): Promise<string | null> {
-  if (!(ACCEPTED_TYPES as readonly string[]).includes(file.type)) return t.errors.type(t.limits)
-  if (file.size > MAX_ORIGINAL_BYTES) return t.errors.tooBig(formatMB(file.size), formatMB(MAX_ORIGINAL_BYTES))
-  let bitmap: ImageBitmap
-  try {
-    bitmap = await createImageBitmap(file)
-  } catch {
-    return t.errors.unreadable
-  }
-  const { width, height } = bitmap
-  bitmap.close()
-  if (width * height > MAX_ORIGINAL_PIXELS) return t.errors.tooManyPixels
-  const scale = Math.min(1, MAX_EDGE / Math.max(width, height))
-  if (Math.min(width, height) * scale < MIN_EDGE) return t.errors.tooSmall(MIN_EDGE)
-  return null
-}
-
-function encode(canvas: HTMLCanvasElement, quality: number): Promise<Blob> {
-  return new Promise((resolve, reject) =>
-    canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('encode failed'))), 'image/jpeg', quality),
-  )
-}
-
-// 在瀏覽器縮圖並重新編碼成 JPEG：檔案變小，也會去除 EXIF（含 GPS 位置）
-async function compress(file: File): Promise<Blob> {
-  const bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' })
-  const scale = Math.min(1, MAX_EDGE / Math.max(bitmap.width, bitmap.height))
-  const canvas = document.createElement('canvas')
-  canvas.width = Math.round(bitmap.width * scale)
-  canvas.height = Math.round(bitmap.height * scale)
-  canvas.getContext('2d')!.drawImage(bitmap, 0, 0, canvas.width, canvas.height)
-  bitmap.close()
-  const blob = await encode(canvas, 0.85)
-  return blob.size <= MAX_UPLOAD_BYTES ? blob : encode(canvas, 0.6)
+  const problem = await checkImage(file)
+  return problem ? imageProblemMessage(problem, t) : null
 }
 
 // min-w-0 與 appearance-none：iOS Safari 的日期欄位有固定最小寬度，不加會撐出欄位而與旁邊重疊
