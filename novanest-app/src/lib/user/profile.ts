@@ -3,12 +3,9 @@ import { db } from '@/lib/db/client'
 import { bodyPhotos, bodyStats, users } from '@/lib/db/schema'
 import { isoDateOf } from '@/lib/training/dates'
 
-export const GENDERS = ['male', 'female'] as const
-export type Gender = (typeof GENDERS)[number]
+import { isGender, type Gender } from './body'
 
-export function isGender(value: unknown): value is Gender {
-  return typeof value === 'string' && (GENDERS as readonly string[]).includes(value)
-}
+export { BODY_LIMITS, GENDERS, isGender, type Gender } from './body'
 
 // 回傳使用者設定的性別；未設定時為 null
 export async function getGender(userId: string): Promise<Gender | null> {
@@ -19,12 +16,6 @@ export async function getGender(userId: string): Promise<Gender | null> {
 export async function setGender(userId: string, gender: Gender | null) {
   await db.update(users).set({ gender }).where(eq(users.id, userId))
 }
-
-export const BODY_LIMITS = {
-  heightCm: { min: 100, max: 250 },
-  weightKg: { min: 20, max: 300 },
-  birthYear: { min: 1900 },
-} as const
 
 export interface BodyData {
   heightCm: number | null

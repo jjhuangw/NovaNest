@@ -1,5 +1,8 @@
 import Link from 'next/link'
+import { redirect } from 'next/navigation'
 import { connection } from 'next/server'
+import { getSession } from '@/lib/auth/session'
+import { getQuestionnaire } from '@/lib/training/questionnaire-store'
 import { DAY_KEYS, formatDuration, isDayKey, mockPlan } from '@/lib/training/plan'
 import { planText } from '@/lib/training/plan-copy'
 import { getI18n } from '@/lib/i18n/server'
@@ -14,7 +17,9 @@ export default async function TrainingPage(props: PageProps<'/training'>) {
   const today = todayKey()
   const selected = isDayKey(day) ? day : today
   const plan = mockPlan
-  const { locale, t } = await getI18n()
+  const session = await getSession()
+  if (!session) redirect('/login')
+  const [{ locale, t }, questionnaire] = await Promise.all([getI18n(), getQuestionnaire(session.userId)])
   const text = planText(locale)
   const current = plan.days.find((d) => d.day === selected)!
   const isRest = current.exercises.length === 0
@@ -37,6 +42,21 @@ export default async function TrainingPage(props: PageProps<'/training'>) {
             <Stat label={t.training.frequency} value={t.training.perWeek(plan.daysPerWeek)} />
             <Stat label={t.training.duration} value={text.sessionLength} />
           </dl>
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-6xl px-6 pt-12">
+        <div className="flex flex-col gap-4 border border-line p-6 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="font-bold">{questionnaire ? t.setup.cta.doneTitle : t.setup.cta.title}</h2>
+            <p className="mt-1 text-sm text-muted">{questionnaire ? t.setup.cta.doneDesc : t.setup.cta.desc}</p>
+          </div>
+          <Link
+            href="/training/setup"
+            className="shrink-0 bg-foreground px-8 py-3 text-center text-xs font-semibold uppercase tracking-widest text-background transition-opacity hover:opacity-85"
+          >
+            {questionnaire ? t.setup.cta.doneButton : t.setup.cta.button}
+          </Link>
         </div>
       </section>
 

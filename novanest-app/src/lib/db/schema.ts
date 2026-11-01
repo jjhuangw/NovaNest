@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, timestamp, numeric, pgEnum, date, integer, uniqueIndex, index } from 'drizzle-orm/pg-core'
+import { pgTable, uuid, text, timestamp, numeric, pgEnum, date, integer, uniqueIndex, index, jsonb } from 'drizzle-orm/pg-core'
 
 // 所有資料表都開啟 RLS 且不設 policy：App 以 postgres 角色連線（會略過 RLS），
 // 而 Supabase 公開 API（anon key）則完全無法存取。不要移除 enableRLS()，
@@ -93,6 +93,16 @@ export const foodEntries = pgTable(
   },
   (t) => [index('food_entries_user_date_idx').on(t.userId, t.date)],
 ).enableRLS()
+
+// 建立課表的問卷答案，每位使用者一筆，重新填寫時覆蓋。
+// 格式見 lib/training/questionnaire.ts，讀出時以 questionnaireSchema 驗證。
+export const planQuestionnaires = pgTable('plan_questionnaires', {
+  userId: uuid('user_id')
+    .primaryKey()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  answers: jsonb('answers').notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}).enableRLS()
 
 export type User = typeof users.$inferSelect
 export type NewUser = typeof users.$inferInsert
