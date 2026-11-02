@@ -108,16 +108,21 @@ export async function generatePlan(answers: Questionnaire, profile: PlanProfile,
 
   let response
   try {
-    response = await client.beta.messages.parse({
-      model: PLAN_MODEL,
-      max_tokens: 32000,
-      // 課表內容多，用 medium 在品質與等待時間之間取平衡
-      output_config: { effort: 'medium', format: betaZodOutputFormat(outputSchema) },
-      betas: ['server-side-fallback-2026-07-01'],
-      fallbacks: 'default',
-      system: TRAINER_SYSTEM_PROMPT,
-      messages: [{ role: 'user', content: describeTrainee(answers, profile, locale) }],
-    })
+    response = await client.beta.messages.parse(
+      {
+        model: PLAN_MODEL,
+        // 一份課表約 5–8k tokens；設太大時 SDK 會因為可能超過 10 分鐘而要求改用串流
+        max_tokens: 16000,
+        // 課表內容多，用 medium 在品質與等待時間之間取平衡
+        output_config: { effort: 'medium', format: betaZodOutputFormat(outputSchema) },
+        betas: ['server-side-fallback-2026-07-01'],
+        fallbacks: 'default',
+        system: TRAINER_SYSTEM_PROMPT,
+        messages: [{ role: 'user', content: describeTrainee(answers, profile, locale) }],
+      },
+      // 在 Vercel 的 300 秒上限前結束，才能回傳錯誤訊息而不是直接被中斷
+      { timeout: 280_000, maxRetries: 0 },
+    )
   } catch (e) {
     console.error('Plan generation request failed', e)
     return { ok: false, reason: 'failed' }
