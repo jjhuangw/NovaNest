@@ -104,6 +104,24 @@ export const planQuestionnaires = pgTable('plan_questionnaires', {
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 }).enableRLS()
 
+// AI 教練產生的課表，保留每次產生的版本，最新一筆即目前使用的課表。
+// plan 為 TrainingPlan（lib/training/plan.ts），讀出時以 trainingPlanSchema 驗證。
+export const trainingPlans = pgTable(
+  'training_plans',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .references(() => users.id, { onDelete: 'cascade' })
+      .notNull(),
+    plan: jsonb('plan').notNull(),
+    // 課表文字使用的語言
+    locale: text('locale').notNull(),
+    model: text('model').notNull(),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+  },
+  (t) => [index('training_plans_user_created_idx').on(t.userId, t.createdAt)],
+).enableRLS()
+
 export type User = typeof users.$inferSelect
 export type NewUser = typeof users.$inferInsert
 export type BodyStats = typeof bodyStats.$inferSelect

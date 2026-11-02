@@ -1,4 +1,4 @@
-// 訓練課表的資料模型。目前以 mockPlan 提供資料，之後再改成從資料庫讀取。
+// 訓練課表的資料模型。使用者產生過 AI 課表時讀資料庫（見 plan-store.ts），否則使用 mockPlan 範例課表。
 
 export const DAY_KEYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as const
 export type DayKey = (typeof DAY_KEYS)[number]
@@ -15,6 +15,8 @@ export interface Exercise {
   restSeconds: number
   // 每組對各肌群的計數：主要肌群 1、次要肌群 0.5
   muscles: Partial<Record<Muscle, number>>
+  // 器材被占用或做起來不舒服時的替代動作（AI 課表才有）
+  substitute?: string
 }
 
 export interface TrainingDay {
@@ -38,6 +40,15 @@ export interface NutritionStrategy {
   fatPerKg: number
 }
 
+export const DIET_MEALS = ['breakfast', 'lunch', 'dinner', 'snack', 'pre_workout', 'post_workout'] as const
+export type DietMeal = (typeof DIET_MEALS)[number]
+
+export interface DietAdvice {
+  summary: string
+  meals: { meal: DietMeal; ideas: string[] }[]
+  avoid: string[]
+}
+
 export interface TrainingPlan {
   title: string
   goal: string
@@ -49,6 +60,10 @@ export interface TrainingPlan {
   days: TrainingDay[]
   guidelines: Guideline[]
   weeklyTracking: string[]
+  // 以下只有 AI 課表才有：預估時程、傷病提醒、飲食建議
+  timeline?: string
+  safetyNotes?: string[]
+  diet?: DietAdvice
 }
 
 export function isDayKey(value: unknown): value is DayKey {

@@ -3,24 +3,31 @@ import { redirect } from 'next/navigation'
 import { connection } from 'next/server'
 import { getSession } from '@/lib/auth/session'
 import { getQuestionnaire } from '@/lib/training/questionnaire-store'
-import { DAY_KEYS, formatDuration, isDayKey, mockPlan } from '@/lib/training/plan'
+import { SavedToast } from '@/components/form-feedback'
+import { DAY_KEYS, formatDuration, isDayKey, type DietAdvice } from '@/lib/training/plan'
+import type { Messages } from '@/lib/i18n/messages'
+import { getActivePlan } from '@/lib/training/plan-store'
 import { planText } from '@/lib/training/plan-copy'
 import { getI18n } from '@/lib/i18n/server'
-import { todayKey } from '@/lib/training/dates'
+import { formatDate, isoDateOf, todayKey } from '@/lib/training/dates'
 
 export const instant = false
 
 export default async function TrainingPage(props: PageProps<'/training'>) {
-  const { day } = await props.searchParams
+  const { day, generated } = await props.searchParams
   // 「今天」必須依每次請求計算，不能在預先渲染時決定
   await connection()
   const today = todayKey()
   const selected = isDayKey(day) ? day : today
-  const plan = mockPlan
   const session = await getSession()
   if (!session) redirect('/login')
-  const [{ locale, t }, questionnaire] = await Promise.all([getI18n(), getQuestionnaire(session.userId)])
-  const text = planText(locale)
+  const [{ locale, t }, questionnaire, active] = await Promise.all([
+    getI18n(),
+    getQuestionnaire(session.userId),
+    getActivePlan(session.userId),
+  ])
+  const { plan } = active
+  const text = planText(locale, plan)
   const current = plan.days.find((d) => d.day === selected)!
   const isRest = current.exercises.length === 0
 
@@ -36,6 +43,9 @@ export default async function TrainingPage(props: PageProps<'/training'>) {
             </span>
           </h1>
           <p className="mt-4 max-w-xl text-base">{text.goal}</p>
+          <p className="mt-2 text-xs text-muted">
+            {active.createdAt ? t.training.generatedOn(formatDate(isoDateOf(active.createdAt))) : t.training.sampleNotice}
+          </p>
           <dl className="mt-8 grid max-w-2xl grid-cols-2 gap-6 sm:grid-cols-4">
             <Stat label={t.training.currentWeight} value={`${plan.currentWeightKg} kg`} />
             <Stat label={t.training.targetWeight} value={`${plan.targetWeightKg} kg`} />
@@ -45,6 +55,11 @@ export default async function TrainingPage(props: PageProps<'/training'>) {
         </div>
       </section>
 
+      {typeof generated === 'string' && <SavedToast key={generated} savedAt={generated} message={t.training.generatedToast} />}
+
+      {active.generated ? (
+        <PlanExtras timeline={plan.timeline} safetyNotes={plan.safetyNotes} t={t} />
+      ) : (
       <section className="mx-auto max-w-6xl px-6 pt-12">
         <div className="flex flex-col gap-4 border border-line p-6 sm:flex-row sm:items-center sm:justify-between">
           <div>
@@ -59,6 +74,7 @@ export default async function TrainingPage(props: PageProps<'/training'>) {
           </Link>
         </div>
       </section>
+      )}
 
       <section className="mx-auto max-w-6xl px-6 py-12">
         <nav aria-label={t.training.chooseDay}>
@@ -109,7 +125,10 @@ export default async function TrainingPage(props: PageProps<'/training'>) {
                 {current.exercises.map((e, i) => (
                   <li key={e.name} className="flex items-baseline gap-4 py-4">
                     <span className="w-6 shrink-0 text-sm font-semibold text-muted">{String(i + 1).padStart(2, '0')}</span>
-                    <span className="flex-1 font-semibold">{text.exercise(e.name)}</span>
+                    <span className="flex-1 font-semibold">
+                      {text.exercise(e.name)}
+                      {e.substitute && <span className="mt-1 block text-xs font-normal text-muted">{t.training.substitute(e.substitute)}</span>}
+                    </span>
                     <span className="text-right text-sm tabular-nums">
                       {t.training.volume(e.sets, e.reps, e.perSide)}
                       <span className="block text-xs text-muted">{t.training.restFor(formatDuration(e.restSeconds))}</span>
@@ -130,6 +149,8 @@ export default async function TrainingPage(props: PageProps<'/training'>) {
           </aside>
         </div>
       </section>
+
+      {plan.diet && <DietSection diet={plan.diet} t={t} />}
 
       <section className="border-t border-line">
         <div className="mx-auto max-w-6xl px-6 py-12">
@@ -156,6 +177,11 @@ export default async function TrainingPage(props: PageProps<'/training'>) {
             </ul>
             <p className="mt-4 text-xs text-muted">{t.training.weeklyTrackingNote}</p>
           </div>
+          {active.generated && (
+            <Link href="/training/setup" className="mt-8 inline-block text-sm font-semibold underline underline-offset-4">
+              {t.training.redo}
+            </Link>
+          )}
         </div>
       </section>
     </div>
@@ -168,5 +194,59 @@ function Stat({ label, value }: { label: string; value: string }) {
       <dt className="text-xs text-muted">{label}</dt>
       <dd className="mt-1 font-bold">{value}</dd>
     </div>
+  )
+}
+
+// AI 課表的預估時程與安全提醒
+function PlanExtras({ timeline, safetyNotes, t }: { timeline?: string; safetyNotes?: string[]; t: Messages }) {
+  if (!timeline && !safetyNotes?.length) return null
+  return (
+    <section className="mx-auto grid max-w-6xl gap-6 px-6 pt-12 md:grid-cols-2">
+      {timeline && (
+        <div className="border border-line p-6">
+          <h2 className="text-xs font-semibold uppercase tracking-widest">{t.training.timeline}</h2>
+          <p className="mt-3 text-sm leading-relaxed">{timeline}</p>
+        </div>
+      )}
+      {safetyNotes && safetyNotes.length > 0 && (
+        <div className="border-l-2 border-accent bg-stone p-6">
+          <h2 className="text-xs font-semibold uppercase tracking-widest text-accent">{t.training.safety}</h2>
+          <ul className="mt-3 space-y-2 text-sm leading-relaxed">
+            {safetyNotes.map((n) => (
+              <li key={n}>{n}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </section>
+  )
+}
+
+function DietSection({ diet, t }: { diet: DietAdvice; t: Messages }) {
+  return (
+    <section className="border-t border-line">
+      <div className="mx-auto max-w-6xl px-6 py-12">
+        <h2 className="text-2xl font-bold">{t.training.dietTitle}</h2>
+        <p className="mt-4 max-w-3xl text-sm leading-relaxed">{diet.summary}</p>
+        <div className="mt-8 grid gap-x-10 gap-y-8 sm:grid-cols-2 lg:grid-cols-3">
+          {diet.meals.map((m) => (
+            <div key={m.meal}>
+              <h3 className="text-xs font-semibold uppercase tracking-widest">{t.training.meals[m.meal]}</h3>
+              <ul className="mt-3 list-disc space-y-2 pl-5 text-sm leading-relaxed text-muted marker:text-line">
+                {m.ideas.map((idea) => (
+                  <li key={idea}>{idea}</li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+        {diet.avoid.length > 0 && (
+          <p className="mt-8 border-l-2 border-accent bg-stone px-4 py-3 text-sm">
+            <span className="font-semibold">{t.training.dietAvoid}</span>
+            {diet.avoid.join(t.setup.listSeparator)}
+          </p>
+        )}
+      </div>
+    </section>
   )
 }

@@ -1,7 +1,7 @@
-// 課表的顯示文字。mockPlan 的中文動作名稱同時是資料庫中 set_logs.exercise_name 的鍵值，
-// 所以計算一律使用 mockPlan，只在顯示時透過這裡換成目前語系的文字。
+// 課表的顯示文字。範例課表的中文動作名稱同時是資料庫中 set_logs.exercise_name 的鍵值，
+// 所以計算一律使用課表原文，只在顯示時透過這裡換成目前語系的文字。
 import type { Locale } from '@/lib/i18n/config'
-import { mockPlan, type DayKey, type Guideline } from './plan'
+import { mockPlan, type DayKey, type Guideline, type TrainingPlan } from './plan'
 
 interface PlanText {
   title: string
@@ -150,8 +150,21 @@ const zhTW: PlanText = {
   exercises: {},
 }
 
-export function planText(locale: Locale) {
-  const text = locale === 'en' ? en : zhTW
+// AI 課表的文字本來就是使用者的語言，直接使用；範例課表才需要翻譯
+function fromPlan(plan: TrainingPlan): PlanText {
+  return {
+    title: plan.title,
+    goal: plan.goal,
+    sessionLength: plan.sessionLength,
+    days: Object.fromEntries(plan.days.map((d) => [d.day, { title: d.title, notes: d.notes }])) as PlanText['days'],
+    guidelines: plan.guidelines,
+    weeklyTracking: plan.weeklyTracking,
+    exercises: {},
+  }
+}
+
+export function planText(locale: Locale, plan: TrainingPlan = mockPlan) {
+  const text = plan !== mockPlan ? fromPlan(plan) : locale === 'en' ? en : zhTW
   return {
     ...text,
     day: (key: DayKey) => text.days[key],

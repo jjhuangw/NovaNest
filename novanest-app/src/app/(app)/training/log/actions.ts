@@ -5,7 +5,7 @@ import { getSession } from '@/lib/auth/session'
 import { plannedSetsFor } from '@/lib/training/completion'
 import { dayKeyOf, isISODate, todayISO } from '@/lib/training/dates'
 import { saveWorkoutLog, type LoggedSet } from '@/lib/training/logs'
-import { mockPlan } from '@/lib/training/plan'
+import { getActivePlan } from '@/lib/training/plan-store'
 
 function parseNumber(value: FormDataEntryValue | null, { integer }: { integer: boolean }): number | null {
   if (typeof value !== 'string' || value.trim() === '') return null
@@ -24,7 +24,8 @@ export async function saveWorkoutLogAction(formData: FormData) {
   }
 
   const dayKey = dayKeyOf(date)
-  const day = mockPlan.days.find((d) => d.day === dayKey)!
+  const { plan } = await getActivePlan(session.userId)
+  const day = plan.days.find((d) => d.day === dayKey)!
   if (day.exercises.length === 0) {
     throw new Error('Cannot log a rest day')
   }
@@ -45,7 +46,7 @@ export async function saveWorkoutLogAction(formData: FormData) {
     userId: session.userId,
     date,
     planDay: dayKey,
-    plannedSets: plannedSetsFor(mockPlan, dayKey),
+    plannedSets: plannedSetsFor(plan, dayKey),
     notes: typeof notes === 'string' && notes.trim() ? notes.trim().slice(0, 2000) : null,
     sets,
   })

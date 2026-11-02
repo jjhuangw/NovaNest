@@ -16,7 +16,8 @@ import {
 import { getFirstLogDate, getLoggedDays, getSetCounts, getWorkoutLog } from '@/lib/training/logs'
 import { computeMuscleVolume } from '@/lib/training/muscles'
 import { getGender } from '@/lib/user/profile'
-import { DAY_KEYS, mockPlan } from '@/lib/training/plan'
+import { DAY_KEYS } from '@/lib/training/plan'
+import { getActivePlan } from '@/lib/training/plan-store'
 import { planText } from '@/lib/training/plan-copy'
 import { getI18n } from '@/lib/i18n/server'
 import type { Messages } from '@/lib/i18n/messages'
@@ -36,7 +37,7 @@ export default async function TrainingLogPage(props: PageProps<'/training/log'>)
   const date = isISODate(params.date) ? params.date : today
   const savedAt = typeof params.saved === 'string' ? params.saved : null
 
-  const plan = mockPlan
+  const { plan } = await getActivePlan(session.userId)
   const day = plan.days.find((d) => d.day === dayKeyOf(date))!
 
   const week = { from: weekStart(date), to: addDays(weekStart(date), 6) }
@@ -49,7 +50,7 @@ export default async function TrainingLogPage(props: PageProps<'/training/log'>)
     getGender(session.userId),
     getI18n(),
   ])
-  const text = planText(locale)
+  const text = planText(locale, plan)
   const month = Number(date.slice(5, 7))
 
   // 還沒有任何紀錄時，從今天開始算

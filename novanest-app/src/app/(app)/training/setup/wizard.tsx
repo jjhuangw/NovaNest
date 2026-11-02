@@ -106,13 +106,16 @@ export function SetupWizard({
   }
 
   const profileNumbers = { heightCm: parseNumber(heightCm), weightKg: parseNumber(weightKg), birthYear: parseNumber(birthYear) }
+  // 身高、體重必填；出生年份選填
   const profileValid =
     gender !== null &&
     Object.values(profileNumbers).every((n) => n === null || !Number.isNaN(n)) &&
-    (profileNumbers.heightCm === null ||
-      (profileNumbers.heightCm >= BODY_LIMITS.heightCm.min && profileNumbers.heightCm <= BODY_LIMITS.heightCm.max)) &&
-    (profileNumbers.weightKg === null ||
-      (profileNumbers.weightKg >= BODY_LIMITS.weightKg.min && profileNumbers.weightKg <= BODY_LIMITS.weightKg.max)) &&
+    profileNumbers.heightCm !== null &&
+    profileNumbers.heightCm >= BODY_LIMITS.heightCm.min &&
+    profileNumbers.heightCm <= BODY_LIMITS.heightCm.max &&
+    profileNumbers.weightKg !== null &&
+    profileNumbers.weightKg >= BODY_LIMITS.weightKg.min &&
+    profileNumbers.weightKg <= BODY_LIMITS.weightKg.max &&
     (profileNumbers.birthYear === null ||
       (profileNumbers.birthYear >= BODY_LIMITS.birthYear.min && profileNumbers.birthYear <= maxBirthYear))
 
@@ -127,7 +130,7 @@ export function SetupWizard({
     }
     startTransition(async () => {
       const result = await saveSetupAction({ answers, profile: { gender, ...profileNumbers } })
-      // 成功時會直接導向摘要頁，只有失敗才會回到這裡
+      // 成功時會導向課表頁（或產生失敗時的摘要頁），只有儲存失敗才會回到這裡
       if (result?.error) {
         setError(result.error)
         if (result.error === 'profile') goTo(0)
@@ -357,6 +360,11 @@ export function SetupWizard({
           {isLast ? (pending ? ts.submitting : ts.submit) : ts.next}
         </button>
       </div>
+      {pending && (
+        <p role="status" className="mt-4 text-sm text-muted">
+          {ts.generatingHint}
+        </p>
+      )}
     </div>
   )
 }

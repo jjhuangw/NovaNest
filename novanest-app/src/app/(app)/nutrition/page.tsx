@@ -15,7 +15,7 @@ import {
   type NutrientProgress,
 } from '@/lib/nutrition/targets'
 import { addDays, dayKeyOf, formatDate, hourOf, isISODate, todayISO, weekStart } from '@/lib/training/dates'
-import { mockPlan } from '@/lib/training/plan'
+import { getActivePlan } from '@/lib/training/plan-store'
 import { planText } from '@/lib/training/plan-copy'
 import { getBodyData } from '@/lib/user/profile'
 import AddFoodForm from './add-food-form'
@@ -32,15 +32,15 @@ export default async function NutritionPage(props: PageProps<'/nutrition'>) {
   const date = isISODate(params.date) ? params.date : today
   const week = { from: weekStart(date), to: addDays(weekStart(date), 6) }
 
-  const plan = mockPlan
-  const [entries, weekTotals, body, { locale, t }] = await Promise.all([
+  const [{ plan }, entries, weekTotals, body, { locale, t }] = await Promise.all([
+    getActivePlan(session.userId),
     listEntries(session.userId, date),
     dailyTotals(session.userId, week.from, week.to),
     getBodyData(session.userId),
     getI18n(),
   ])
   const tn = t.nutrition
-  const text = planText(locale)
+  const text = planText(locale, plan)
 
   const profile = bodyProfileFrom(body, plan, today)
   const dayKey = dayKeyOf(date)

@@ -2,7 +2,7 @@ import { getSession } from '@/lib/auth/session'
 import { redirect } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
-import { mockPlan } from '@/lib/training/plan'
+import { getActivePlan } from '@/lib/training/plan-store'
 import { planText } from '@/lib/training/plan-copy'
 import { getI18n } from '@/lib/i18n/server'
 import { addDays, formatDate, todayISO, todayKey, weekStart } from '@/lib/training/dates'
@@ -22,7 +22,8 @@ export default async function DashboardPage() {
   const session = await getSession()
   if (!session) redirect('/login')
 
-  const today = mockPlan.days.find((d) => d.day === todayKey())!
+  const { plan } = await getActivePlan(session.userId)
+  const today = plan.days.find((d) => d.day === todayKey())!
   const todayDate = todayISO()
   const week = { from: weekStart(todayDate), to: addDays(weekStart(todayDate), 6) }
   const [logged, firstLogDate, photoStats, foodTotals, body, { locale, t }] = await Promise.all([
@@ -33,9 +34,9 @@ export default async function DashboardPage() {
     getBodyData(session.userId),
     getI18n(),
   ])
-  const text = planText(locale)
+  const text = planText(locale, plan)
   const food = foodTotals.get(todayDate)
-  const foodTargets = dayTargets(mockPlan, today.day, bodyProfileFrom(body, mockPlan, todayDate))
+  const foodTargets = dayTargets(plan, today.day, bodyProfileFrom(body, plan, todayDate))
   const nutritionTile: Tile = {
     title: t.dashboard.nutritionTitle,
     subtitle: food
@@ -60,7 +61,7 @@ export default async function DashboardPage() {
     href: '/progress',
     cta: photoStats.count > 0 ? t.dashboard.photosCta : t.dashboard.photosCtaFirst,
   }
-  const weekStats = computeCompletion(mockPlan, week, firstLogDate ?? todayDate, todayDate, logged)
+  const weekStats = computeCompletion(plan, week, firstLogDate ?? todayDate, todayDate, logged)
   const trainingTile: Tile = {
     title: t.dashboard.trainingTitle,
     subtitle:

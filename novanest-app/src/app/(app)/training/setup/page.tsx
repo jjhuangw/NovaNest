@@ -2,23 +2,33 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { getSession } from '@/lib/auth/session'
 import { getI18n } from '@/lib/i18n/server'
-import { isoDateOf, todayISO } from '@/lib/training/dates'
+import { formatDate, isoDateOf, todayISO } from '@/lib/training/dates'
 import { DAY_KEYS } from '@/lib/training/plan'
 import { CURRENT_SHAPES, DEFAULT_ANSWERS, findShape, TARGET_SHAPES, type Questionnaire } from '@/lib/training/questionnaire'
 import { getQuestionnaire } from '@/lib/training/questionnaire-store'
+import { getActivePlan } from '@/lib/training/plan-store'
 import { getBodyData, type Gender } from '@/lib/user/profile'
 import type { Messages } from '@/lib/i18n/messages'
+import { generatePlanAction } from './actions'
 import { BodyShapeFigure } from './body-shape'
+import { GenerateButton } from './generate-button'
 import { SetupWizard } from './wizard'
 
 export const instant = false
+// 產生課表的 server action 在這個頁面執行，模型回應約需 1–2 分鐘
+export const maxDuration = 300
 
 export default async function SetupPage(props: PageProps<'/training/setup'>) {
   const session = await getSession()
   if (!session) redirect('/login')
 
-  const { edit } = await props.searchParams
-  const [saved, body, { t }] = await Promise.all([getQuestionnaire(session.userId), getBodyData(session.userId), getI18n()])
+  const { edit, error } = await props.searchParams
+  const [saved, body, active, { t }] = await Promise.all([
+    getQuestionnaire(session.userId),
+    getBodyData(session.userId),
+    getActivePlan(session.userId),
+    getI18n(),
+  ])
   const ts = t.setup
   const showSummary = saved !== null && body.gender !== null && edit !== '1'
 
@@ -33,7 +43,13 @@ export default async function SetupPage(props: PageProps<'/training/setup'>) {
       </section>
 
       {showSummary ? (
-        <Summary answers={saved.answers} gender={body.gender!} updatedAt={isoDateOf(saved.updatedAt)} t={t} />
+        <Summary
+          answers={saved.answers}
+          gender={body.gender!}
+          planCreatedAt={active.createdAt && isoDateOf(active.createdAt)}
+          error={typeof error === 'string' ? (ts.generateErrors[error] ?? null) : null}
+          t={t}
+        />
       ) : (
         <SetupWizard
           initialAnswers={saved?.answers ?? DEFAULT_ANSWERS}
@@ -45,7 +61,19 @@ export default async function SetupPage(props: PageProps<'/training/setup'>) {
   )
 }
 
-function Summary({ answers, gender, updatedAt, t }: { answers: Questionnaire; gender: Gender; updatedAt: string; t: Messages }) {
+function Summary({
+  answers,
+  gender,
+  planCreatedAt,
+  error,
+  t,
+}: {
+  answers: Questionnaire
+  gender: Gender
+  planCreatedAt: string | null
+  error: string | null
+  t: Messages
+}) {
   const ts = t.setup
   const join = (items: string[]) => (items.length ? items.join(ts.listSeparator) : ts.none)
   const current = findShape(CURRENT_SHAPES[gender], answers.currentShape)
@@ -70,8 +98,18 @@ function Summary({ answers, gender, updatedAt, t }: { answers: Questionnaire; ge
       <div className="border-l-2 border-accent pl-5">
         <h2 className="text-2xl font-bold">{ts.savedTitle}</h2>
         <p className="mt-2 text-sm text-muted">{ts.savedNote}</p>
-        <p className="mt-1 text-xs text-muted">{ts.updatedAt(updatedAt.replaceAll('-', '/'))}</p>
+        {planCreatedAt && <p className="mt-1 text-xs text-muted">{ts.hasPlan(formatDate(planCreatedAt))}</p>}
       </div>
+
+      {error && (
+        <p role="alert" className="mt-6 border-l-2 border-accent bg-stone px-3 py-2 text-sm text-accent">
+          {error}
+        </p>
+      )}
+
+      <form action={generatePlanAction} className="mt-6">
+        <GenerateButton label={planCreatedAt ? ts.regenerate : ts.generate} pendingLabel={ts.generating} primary={!planCreatedAt} />
+      </form>
 
       <div className="mt-10 grid grid-cols-2 gap-4">
         {(
