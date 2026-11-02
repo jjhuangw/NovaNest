@@ -7,7 +7,7 @@ import { foodItemSchema, type FoodItem } from './nutrients'
 
 export type AnalyzeMode = 'photo' | 'label'
 
-const MODEL = 'claude-opus-5-5'
+const MODEL = 'claude-sonnet-5-5'
 
 // 模型輸出的格式。數值範圍不放在這裡（結構化輸出不支援），回來後再以 foodItemSchema 驗證。
 const outputSchema = z.object({
