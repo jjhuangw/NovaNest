@@ -10,7 +10,7 @@ import { trainingPlanSchema } from './plan-schema'
 import { CURRENT_SHAPES, findShape, TARGET_SHAPES, type Questionnaire } from './questionnaire'
 import { TRAINER_SYSTEM_PROMPT } from './trainer-prompt'
 
-export const PLAN_MODEL = 'claude-opus-5-5'
+export const PLAN_MODEL = 'claude-sonnet-5-5'
 
 // 模型輸出的格式。數值範圍與選填欄位不放在這裡（結構化輸出不支援），回來後再以 trainingPlanSchema 驗證。
 // 肌群改用陣列表示，避免物件的鍵不固定。
