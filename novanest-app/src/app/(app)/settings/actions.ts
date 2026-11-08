@@ -3,7 +3,7 @@
 import { redirect } from 'next/navigation'
 import { getSession } from '@/lib/auth/session'
 import { todayISO } from '@/lib/training/dates'
-import { BODY_LIMITS, getBodyData, isGender, saveBodyData, setGender } from '@/lib/user/profile'
+import { BODY_LIMITS, getBodyData, isGender, normalizeDisplayName, saveBodyData, setDisplayName, setGender } from '@/lib/user/profile'
 
 // 空白代表不填；超出範圍時整份不儲存並顯示錯誤
 function parseOptional(value: FormDataEntryValue | null, min: number, max: number, decimals: number): number | null | 'invalid' {
@@ -32,5 +32,16 @@ export async function updateProfileAction(formData: FormData) {
   await setGender(session.userId, isGender(gender) ? gender : null)
   await saveBodyData(session.userId, { heightCm, weightKg, birthYear }, current)
 
+  redirect(`/settings?saved=${Date.now()}`)
+}
+
+// 顯示名稱留空時改回顯示使用者名稱
+export async function updateDisplayNameAction(formData: FormData) {
+  const session = await getSession()
+  if (!session) redirect('/login')
+
+  const name = normalizeDisplayName(formData.get('displayName'))
+  if (name === 'invalid') redirect('/settings?error=name')
+  await setDisplayName(session.userId, name)
   redirect(`/settings?saved=${Date.now()}`)
 }

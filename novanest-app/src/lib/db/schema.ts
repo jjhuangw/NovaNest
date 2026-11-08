@@ -6,6 +6,8 @@ import { pgTable, uuid, text, timestamp, numeric, pgEnum, date, integer, uniqueI
 export const users = pgTable('users', {
   id: uuid('id').primaryKey().defaultRandom(),
   username: text('username').unique().notNull(),
+  // 顯示在畫面上的名稱，可含中文與空白；未設定時顯示 username
+  displayName: text('display_name'),
   email: text('email').unique().notNull(),
   passwordHash: text('password_hash').notNull(),
   // 'male' | 'female'；未設定時為 null，顯示時預設男性

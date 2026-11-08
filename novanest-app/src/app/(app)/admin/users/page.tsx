@@ -95,7 +95,10 @@ export default async function AdminUsersPage(props: PageProps<'/admin/users'>) {
                     <Link href={`/admin/users/${u.id}`} className="font-semibold underline-offset-4 hover:underline">
                       {u.username}
                     </Link>
-                    <span className="block text-xs text-muted">{u.email}</span>
+                    <span className="block text-xs text-muted">
+                      {u.displayName ? `${u.displayName} · ` : ''}
+                      {u.email}
+                    </span>
                   </td>
                   <td className={tdClass}>{ta.roles[u.role] ?? u.role}</td>
                   <td className={tdClass}>

@@ -13,7 +13,7 @@ import {
   todayISO,
   weekStart,
 } from '@/lib/training/dates'
-import { getFirstLogDate, getLoggedDays, getSetCounts, getWorkoutLog } from '@/lib/training/logs'
+import { getFirstLogDate, getLoggedDays, getSetCounts, getWorkoutLog, type LoggedSet } from '@/lib/training/logs'
 import { computeMuscleVolume } from '@/lib/training/muscles'
 import { getGender } from '@/lib/user/profile'
 import { DAY_KEYS } from '@/lib/training/plan'
@@ -25,6 +25,7 @@ import { saveWorkoutLogAction } from './actions'
 import { SavedToast, SubmitButton } from '@/components/form-feedback'
 import MuscleMap from './muscle-map'
 import { RestButton, RestTimerProvider } from './rest-timer'
+import StoryShare, { type StoryCard } from './story-share'
 
 export const instant = false
 
@@ -60,6 +61,25 @@ export default async function TrainingLogPage(props: PageProps<'/training/log'>)
   const dayStats = monthStats.days.find((d) => d.date === date)!
   const muscleVolumes = computeMuscleVolume(plan, weekStats.days, weekSetCounts)
   const completed = t.log.completed(dayStats.completedSets, dayStats.plannedSets)
+
+  // 有儲存過的組才能打卡；圖片內容以已儲存的紀錄為準
+  const storyCard: StoryCard | null =
+    log && log.sets.length > 0 && date <= today
+      ? {
+          date: `${date.replaceAll('-', '/')} · ${t.days[day.day]}`,
+          title: text.day(day.day).title,
+          rate: formatRate(dayStats.rate),
+          completedSets: dayStats.completedSets,
+          plannedSets: dayStats.plannedSets,
+          volumeKg: log.sets.reduce((sum, s) => sum + (s.weightKg ?? 0) * s.reps, 0),
+          exercises: groupSets(log.sets).map((sets) => ({
+            name: text.exercise(sets[0].exerciseName),
+            sets: sets.length,
+            best: bestSet(sets),
+          })),
+          name: session.displayName,
+        }
+      : null
 
   const setValue = (exerciseIndex: number, setNumber: number) =>
     log?.sets.find((s) => s.exerciseIndex === exerciseIndex && s.setNumber === setNumber)
@@ -143,6 +163,13 @@ export default async function TrainingLogPage(props: PageProps<'/training/log'>)
               </Link>
             </nav>
           </div>
+
+          {storyCard && (
+            <div className="mt-4 flex flex-wrap items-center gap-3">
+              <StoryShare card={storyCard} fileName={`novanest-${date}.png`} />
+              <span className="text-xs text-muted">{t.log.share.savedOnly}</span>
+            </div>
+          )}
 
           {savedAt && (
             <SavedToast
@@ -304,4 +331,21 @@ function Stat({ label, value }: { label: string; value: string }) {
       <dd className="mt-1 text-2xl font-bold tabular-nums">{value}</dd>
     </div>
   )
+}
+
+function groupSets(sets: LoggedSet[]): LoggedSet[][] {
+  const groups = new Map<number, LoggedSet[]>()
+  for (const s of sets) {
+    if (!groups.has(s.exerciseIndex)) groups.set(s.exerciseIndex, [])
+    groups.get(s.exerciseIndex)!.push(s)
+  }
+  return [...groups.entries()].sort(([a], [b]) => a - b).map(([, g]) => g)
+}
+
+// 最重的一組（同重量取次數多的）；都沒填重量時顯示最多次數
+function bestSet(sets: LoggedSet[]): string | null {
+  const weighted = sets.filter((s) => s.weightKg !== null && s.weightKg > 0)
+  if (weighted.length === 0) return `× ${Math.max(...sets.map((s) => s.reps))}`
+  const best = weighted.reduce((a, b) => (b.weightKg! > a.weightKg! || (b.weightKg === a.weightKg && b.reps > a.reps) ? b : a))
+  return `${Number(best.weightKg!.toFixed(2))} kg × ${best.reps}`
 }

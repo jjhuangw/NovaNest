@@ -81,7 +81,7 @@ export default async function DashboardPage() {
         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/25 to-transparent" />
         <div className="absolute inset-0 mx-auto flex max-w-6xl flex-col justify-end px-6 pb-12 text-white">
           <p className="text-xs font-semibold uppercase tracking-[0.3em]">Welcome back</p>
-          <h1 className="mt-3 text-4xl font-bold leading-tight sm:text-6xl">{t.dashboard.welcome(session.username)}</h1>
+          <h1 className="mt-3 text-4xl font-bold leading-tight sm:text-6xl">{t.dashboard.welcome(session.displayName)}</h1>
           <p className="mt-3 max-w-md text-base text-white/85">{t.dashboard.welcomeSub}</p>
         </div>
       </section>

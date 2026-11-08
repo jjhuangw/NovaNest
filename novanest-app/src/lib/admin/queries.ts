@@ -133,6 +133,7 @@ export async function listUsers({ q, filter, page }: { q: string; filter: UserFi
       .select({
         id: users.id,
         username: users.username,
+        displayName: users.displayName,
         email: users.email,
         role: users.role,
         disabledAt: users.disabledAt,
@@ -159,6 +160,7 @@ export async function getUserDetail(userId: string) {
     .select({
       id: users.id,
       username: users.username,
+      displayName: users.displayName,
       email: users.email,
       role: users.role,
       gender: users.gender,

@@ -5,8 +5,8 @@ import { SavedToast, SubmitButton } from '@/components/form-feedback'
 import { isTheme, THEME_COOKIE } from '@/lib/i18n/config'
 import { getI18n } from '@/lib/i18n/server'
 import { todayISO } from '@/lib/training/dates'
-import { BODY_LIMITS, getBodyData } from '@/lib/user/profile'
-import { updateProfileAction } from './actions'
+import { BODY_LIMITS, DISPLAY_NAME_MAX, getBodyData } from '@/lib/user/profile'
+import { updateDisplayNameAction, updateProfileAction } from './actions'
 import { LanguageSelect, ThemeSelect, segmentClass } from './preferences'
 
 export const instant = false
@@ -23,6 +23,7 @@ export default async function SettingsPage(props: PageProps<'/settings'>) {
   const params = await props.searchParams
   const savedAt = typeof params.saved === 'string' ? params.saved : null
   const invalid = params.error === 'body'
+  const nameInvalid = params.error === 'name'
   const [body, { t }, cookieStore] = await Promise.all([getBodyData(session.userId), getI18n(), cookies()])
   const thisYear = Number(todayISO().slice(0, 4))
   const savedTheme = cookieStore.get(THEME_COOKIE)?.value
@@ -41,13 +42,37 @@ export default async function SettingsPage(props: PageProps<'/settings'>) {
         <div className="mx-auto max-w-6xl px-6 py-12">
           <p className="text-xs font-semibold uppercase tracking-[0.3em] text-muted">Settings</p>
           <h1 className="mt-3 text-3xl font-bold sm:text-5xl">{ts.title}</h1>
-          <p className="mt-4 text-base">{session.username}</p>
+          <p className="mt-4 text-base">{session.displayName}</p>
         </div>
       </section>
 
       {savedAt && <SavedToast key={savedAt} savedAt={savedAt} message={ts.saved} />}
 
       <div className="mx-auto max-w-6xl px-6">
+        <Section title={ts.account} hint={ts.accountHint}>
+          <form action={updateDisplayNameAction}>
+            <label className="block min-w-0">
+              <span className={fieldLabel}>{ts.displayName}</span>
+              <input
+                name="displayName"
+                type="text"
+                maxLength={DISPLAY_NAME_MAX}
+                autoComplete="nickname"
+                defaultValue={session.displayName === session.username ? '' : session.displayName}
+                placeholder={session.username}
+                className={inputClass}
+              />
+            </label>
+            <p className="mt-2 text-xs text-muted">{ts.displayNameHint(session.username, DISPLAY_NAME_MAX)}</p>
+            {nameInvalid && (
+              <p className="mt-6 border-l-2 border-accent bg-stone px-3 py-2 text-sm text-accent">{ts.displayNameInvalid(DISPLAY_NAME_MAX)}</p>
+            )}
+            <div className="mt-2">
+              <SubmitButton label={ts.save} />
+            </div>
+          </form>
+        </Section>
+
         <Section title={ts.profile} hint={ts.profileHint}>
           <form action={updateProfileAction}>
             <fieldset>

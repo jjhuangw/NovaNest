@@ -13,6 +13,8 @@ export type Role = 'user' | 'admin'
 export interface Session {
   userId: string
   username: string
+  // 顯示名稱；使用者沒設定時等於 username
+  displayName: string
   role: Role
 }
 
@@ -26,11 +28,16 @@ export const getSession = cache(async (): Promise<Session | null> => {
   if (!payload) return null
 
   const [user] = await db
-    .select({ id: users.id, username: users.username, role: users.role, disabledAt: users.disabledAt })
+    .select({ id: users.id, username: users.username, displayName: users.displayName, role: users.role, disabledAt: users.disabledAt })
     .from(users)
     .where(eq(users.id, payload.userId))
   if (!user || user.disabledAt) return null
-  return { userId: user.id, username: user.username, role: user.role === 'admin' ? 'admin' : 'user' }
+  return {
+    userId: user.id,
+    username: user.username,
+    displayName: user.displayName ?? user.username,
+    role: user.role === 'admin' ? 'admin' : 'user',
+  }
 })
 
 // 管理員專用的頁面與 action 都要呼叫；非管理員一律視為找不到

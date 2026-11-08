@@ -80,3 +80,17 @@ export async function saveBodyData(
     })
   }
 }
+
+export const DISPLAY_NAME_MAX = 30
+
+// 去掉前後空白與控制字元，連續空白合併；空字串代表改回使用 username
+export function normalizeDisplayName(value: unknown): string | null | 'invalid' {
+  if (typeof value !== 'string') return null
+  const name = value.replace(/[\p{Cc}\p{Cf}]/gu, '').replace(/\s+/g, ' ').trim()
+  if (name === '') return null
+  return [...name].length > DISPLAY_NAME_MAX ? 'invalid' : name
+}
+
+export async function setDisplayName(userId: string, displayName: string | null) {
+  await db.update(users).set({ displayName }).where(eq(users.id, userId))
+}
