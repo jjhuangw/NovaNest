@@ -210,13 +210,14 @@ export async function getAiUsageReport(days: UsagePeriod) {
       .select({
         userId: aiUsage.userId,
         username: users.username,
+        email: users.email,
         model: aiUsage.model,
         ...tokenSums,
       })
       .from(aiUsage)
       .leftJoin(users, eq(users.id, aiUsage.userId))
       .where(inPeriod)
-      .groupBy(aiUsage.userId, users.username, aiUsage.model),
+      .groupBy(aiUsage.userId, users.username, users.email, aiUsage.model),
     db
       .select({ feature: aiUsage.feature, n: sql<number>`count(*)::int` })
       .from(aiUsage)
@@ -230,9 +231,9 @@ export async function getAiUsageReport(days: UsagePeriod) {
   // 使用者刪除後 user_id 為 null，合併成一列
   const userRows = byUser.map((r) => ({ ...r, key: r.userId ?? '' }))
   const users_ = groupTotals(userRows, 'key')
-  const names = new Map(userRows.map((r) => [r.key, r.username]))
+  const names = new Map(userRows.map((r) => [r.key, { username: r.username, email: r.email }]))
   const topUsers = [...users_.entries()]
-    .map(([id, totals]) => ({ userId: id || null, username: names.get(id) ?? null, totals }))
+    .map(([id, totals]) => ({ userId: id || null, username: names.get(id)?.username ?? null, email: names.get(id)?.email ?? null, totals }))
     .sort((a, b) => b.totals.costUsd - a.totals.costUsd || b.totals.calls - a.totals.calls)
     .slice(0, 20)
 

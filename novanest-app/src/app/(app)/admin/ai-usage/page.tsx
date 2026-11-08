@@ -71,6 +71,7 @@ export default async function AdminAiUsagePage(props: PageProps<'/admin/ai-usage
               rows={report.topUsers.map((u) => ({
                 key: u.userId ?? 'deleted',
                 label: u.username ?? tg.deletedUser,
+                sub: u.email ?? undefined,
                 href: u.userId ? `/admin/users/${u.userId}` : undefined,
                 totals: u.totals,
               }))}
@@ -97,7 +98,8 @@ function UsageTable({
 }: {
   t: UsageText
   firstColumn: string
-  rows: { key: string; label: string; href?: string; totals: UsageTotals; failures?: number }[]
+  // sub：名稱可能重複，使用者列表以 Email 區分
+  rows: { key: string; label: string; sub?: string; href?: string; totals: UsageTotals; failures?: number }[]
   showFailures?: boolean
 }) {
   const right = `${thClass} text-right`
@@ -129,6 +131,7 @@ function UsageTable({
                   ) : (
                     r.label
                   )}
+                  {r.sub && <span className="block text-xs text-muted">{r.sub}</span>}
                 </td>
                 <td className={td}>{formatInt(r.totals.calls)}</td>
                 {showFailures && <td className={td}>{formatInt(r.failures ?? 0)}</td>}

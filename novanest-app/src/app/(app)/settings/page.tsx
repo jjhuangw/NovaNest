@@ -6,7 +6,7 @@ import { isTheme, THEME_COOKIE } from '@/lib/i18n/config'
 import { getI18n } from '@/lib/i18n/server'
 import { todayISO } from '@/lib/training/dates'
 import { BODY_LIMITS, getBodyData } from '@/lib/user/profile'
-import { USERNAME_MAX, USERNAME_MIN } from '@/lib/user/username'
+import { USERNAME_MAX } from '@/lib/user/username'
 import { updateProfileAction, updateUsernameAction } from './actions'
 import { LanguageSelect, ThemeSelect, segmentClass } from './preferences'
 
@@ -24,8 +24,13 @@ export default async function SettingsPage(props: PageProps<'/settings'>) {
   const params = await props.searchParams
   const savedAt = typeof params.saved === 'string' ? params.saved : null
   const invalid = params.error === 'body'
-  const usernameError = params.error === 'username_invalid' ? 'invalid' : params.error === 'username_taken' ? 'taken' : null
   const [body, { t }, cookieStore] = await Promise.all([getBodyData(session.userId), getI18n(), cookies()])
+  const usernameError =
+    params.error === 'username_invalid'
+      ? t.auth.errors.invalid_username
+      : params.error === 'username_unavailable'
+        ? t.auth.errors.username_unavailable
+        : null
   const thisYear = Number(todayISO().slice(0, 4))
   const savedTheme = cookieStore.get(THEME_COOKIE)?.value
   const theme = isTheme(savedTheme) ? savedTheme : 'system'
@@ -58,22 +63,14 @@ export default async function SettingsPage(props: PageProps<'/settings'>) {
                 name="username"
                 type="text"
                 required
-                minLength={USERNAME_MIN}
                 maxLength={USERNAME_MAX}
-                pattern="[A-Za-z0-9_]+"
-                autoComplete="username"
-                autoCapitalize="none"
-                spellCheck={false}
+                autoComplete="nickname"
                 defaultValue={session.username}
                 className={inputClass}
               />
             </label>
             <p className="mt-2 text-xs text-muted">{ts.usernameHint}</p>
-            {usernameError && (
-              <p className="mt-6 border-l-2 border-accent bg-stone px-3 py-2 text-sm text-accent">
-                {usernameError === 'taken' ? t.auth.errors.username_taken : t.auth.errors.invalid_username}
-              </p>
-            )}
+            {usernameError && <p className="mt-6 border-l-2 border-accent bg-stone px-3 py-2 text-sm text-accent">{usernameError}</p>}
             <div className="mt-2">
               <SubmitButton label={ts.save} />
             </div>

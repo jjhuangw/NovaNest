@@ -6,6 +6,7 @@ import { users } from '@/lib/db/schema'
 import { signToken } from '@/lib/auth/jwt'
 import { COOKIE_NAME } from '@/lib/auth/session'
 import { usernameSchema } from '@/lib/user/username'
+import { uniqueViolation } from '@/lib/db/errors'
 import { eq } from 'drizzle-orm'
 
 // 錯誤訊息為代碼，由前端依語系顯示
@@ -31,15 +32,18 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'email_taken' }, { status: 409 })
   }
 
-  const existingUsername = await db.query.users.findFirst({
-    where: (u) => eq(u.username, username),
-  })
-  if (existingUsername) {
-    return NextResponse.json({ error: 'username_taken' }, { status: 409 })
-  }
-
   const passwordHash = await bcrypt.hash(password, 12)
-  const [user] = await db.insert(users).values({ username, email, passwordHash }).returning()
+  let user
+  try {
+    ;[user] = await db.insert(users).values({ username, email, passwordHash }).returning()
+  } catch (e) {
+    const constraint = uniqueViolation(e)
+    // 同一個 Email 幾乎同時註冊兩次
+    if (constraint === 'users_email_unique') return NextResponse.json({ error: 'email_taken' }, { status: 409 })
+    // 資料庫還保留使用者名稱的唯一限制（尚未執行 0002_username_not_unique.sql）
+    if (constraint !== null) return NextResponse.json({ error: 'username_unavailable' }, { status: 409 })
+    throw e
+  }
 
   const token = await signToken({ userId: user.id, username: user.username })
 
@@ -53,3 +57,4 @@ export async function POST(req: NextRequest) {
   })
   return res
 }
+

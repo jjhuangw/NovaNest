@@ -5,7 +5,8 @@ import { pgTable, uuid, text, timestamp, numeric, pgEnum, date, integer, uniqueI
 // 否則 db:push 會把 RLS 關掉。
 export const users = pgTable('users', {
   id: uuid('id').primaryKey().defaultRandom(),
-  username: text('username').unique().notNull(),
+  // 顯示用的名字，可重複、可用中文；規則見 lib/user/username.ts
+  username: text('username').notNull(),
   email: text('email').unique().notNull(),
   passwordHash: text('password_hash').notNull(),
   // 'male' | 'female'；未設定時為 null，顯示時預設男性

@@ -3,6 +3,7 @@ import { db } from '@/lib/db/client'
 import { bodyPhotos, bodyStats, users } from '@/lib/db/schema'
 import { isoDateOf } from '@/lib/training/dates'
 import { usernameSchema } from './username'
+import { uniqueViolation } from '@/lib/db/errors'
 
 import { isGender, type Gender } from './body'
 
@@ -82,21 +83,17 @@ export async function saveBodyData(
   }
 }
 
-export type UsernameChange = 'ok' | 'invalid' | 'taken'
+export type UsernameChange = 'ok' | 'invalid' | 'unavailable'
 
-// 規則與註冊相同；與其他人重複時不變更
+// 規則與註冊相同，允許和其他人重複
 export async function changeUsername(userId: string, value: unknown): Promise<UsernameChange> {
-  const parsed = usernameSchema.safeParse(typeof value === 'string' ? value.trim() : value)
+  const parsed = usernameSchema.safeParse(value)
   if (!parsed.success) return 'invalid'
-  const username = parsed.data
-
-  const existing = await db.query.users.findFirst({ where: eq(users.username, username), columns: { id: true } })
-  if (existing) return existing.id === userId ? 'ok' : 'taken'
   try {
-    await db.update(users).set({ username }).where(eq(users.id, userId))
+    await db.update(users).set({ username: parsed.data }).where(eq(users.id, userId))
   } catch (e) {
-    // 檢查後到寫入前被別人搶先註冊，由 unique constraint 擋下
-    if ((e as { cause?: { code?: string } }).cause?.code === '23505' || (e as { code?: string }).code === '23505') return 'taken'
+    // 資料庫還保留使用者名稱的唯一限制（尚未執行 0002_username_not_unique.sql）
+    if (uniqueViolation(e) !== null) return 'unavailable'
     throw e
   }
   return 'ok'
