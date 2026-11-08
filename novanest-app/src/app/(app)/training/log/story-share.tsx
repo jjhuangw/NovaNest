@@ -1,86 +1,307 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import { useI18n } from '@/lib/i18n/client'
+import {
+  drawStory,
+  fontFamily,
+  H,
+  isMobileDevice,
+  PALETTES,
+  THEMES,
+  W,
+  type Box,
+  type StoryCard,
+  type StoryOptions,
+  type Sticker,
+  type Theme,
+} from './story-card'
 
-export interface StoryCard {
+export type { StoryCard } from './story-card'
+
+const EMOJIS = ['💪', '🔥', '🏋️', '✅', '💯', '🎯', '😤', '🥵', '⚡', '🙌', '😎', '🏆']
+const STICKER_COLORS = [null, '#ffffff', '#0e0e0e', '#ff4b57', '#facc15'] as const
+const MIN_SIZE = 32
+const MAX_SIZE = 420
+const MAX_TEXT = 40
+
+type Photo = ImageBitmap
+
+const noop = () => () => {}
+
+export default function StoryShare({
+  card,
+  date,
+  fileName,
+  autoOpen = false,
+}: {
+  card: StoryCard
   date: string
-  title: string
-  rate: string
-  completedSets: number
-  plannedSets: number
-  volumeKg: number
-  exercises: { name: string; sets: number; best: string | null }[]
-  name: string
-}
-
-// IG 限時動態的尺寸；上下約 250px 會被 IG 的介面蓋住，內容放在中間
-const W = 1080
-const H = 1920
-const PAD = 96
-const COLORS = { bg: '#0e0e0e', fg: '#f2f2f0', muted: '#a3a3a0', line: '#34342f', accent: '#ff4b57' }
-
-type Status = 'idle' | 'drawing' | 'ready' | 'error'
-
-export default function StoryShare({ card, fileName }: { card: StoryCard; fileName: string }) {
+  fileName: string
+  autoOpen?: boolean
+}) {
   const { t } = useI18n()
   const ts = t.log.share
-  const [open, setOpen] = useState(false)
-  const [status, setStatus] = useState<Status>('idle')
-  const [file, setFile] = useState<File | null>(null)
-  const [url, setUrl] = useState<string | null>(null)
-  const [message, setMessage] = useState<string | null>(null)
-  const closeRef = useRef<HTMLButtonElement>(null)
+  const [open, setOpen] = useState(autoOpen)
+  const mobile = useSyncExternalStore(noop, isMobileDevice, () => false)
 
-  useEffect(() => () => {
-    if (url) URL.revokeObjectURL(url)
-  }, [url])
+  const [options, setOptions] = useState<StoryOptions>({
+    theme: 'dark',
+    title: card.title,
+    showRate: true,
+    showStats: true,
+    showExercises: true,
+    showName: true,
+  })
+  const [stickers, setStickers] = useState<Sticker[]>([])
+  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [photo, setPhoto] = useState<{ id: number; image: Photo } | null>(null)
+  const [draft, setDraft] = useState('')
+  const [exported, setExported] = useState<{ key: string; file: File; url: string } | null>(null)
+  const [message, setMessage] = useState<string | null>(null)
+  const [qr, setQr] = useState<string | null>(null)
+
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const boxesRef = useRef<Box[]>([])
+  const photoInputRef = useRef<HTMLInputElement>(null)
+  const closeRef = useRef<HTMLButtonElement>(null)
+  const familyRef = useRef<string | null>(null)
+
+  const selected = stickers.find((s) => s.id === selectedId) ?? null
+  const palette = PALETTES[options.theme === 'photo' && !photo ? 'dark' : options.theme]
+  // 內容沒變就沿用已產生的圖片；變了要重新匯出才能分享
+  const exportKey = useMemo(() => JSON.stringify({ options, stickers, photo: photo?.id ?? null }), [options, stickers, photo])
+  const current = exported?.key === exportKey ? exported : null
+  const ready = current !== null
+
+  // 預覽：每次變更都重畫，包含選取框
+  useEffect(() => {
+    if (!open) return
+    const canvas = canvasRef.current
+    const ctx = canvas?.getContext('2d')
+    if (!ctx) return
+    let cancelled = false
+    document.fonts.ready.then(() => {
+      if (cancelled) return
+      familyRef.current ??= fontFamily()
+      boxesRef.current = drawStory(ctx, {
+        card,
+        options,
+        text: ts.card,
+        family: familyRef.current,
+        photo: photo?.image ?? null,
+        stickers,
+        selectedId,
+      })
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [open, card, options, stickers, selectedId, photo, ts.card])
+
+  // 匯出：停止編輯一下子後產生 PNG。分享必須在點擊當下呼叫，Safari 不允許先等待產生圖片。
+  useEffect(() => {
+    if (!open || ready) return
+    let cancelled = false
+    const timer = setTimeout(async () => {
+      try {
+        await document.fonts.ready
+        const canvas = document.createElement('canvas')
+        canvas.width = W
+        canvas.height = H
+        const ctx = canvas.getContext('2d')
+        if (!ctx) throw new Error('Canvas 2D is not supported')
+        familyRef.current ??= fontFamily()
+        drawStory(ctx, { card, options, text: ts.card, family: familyRef.current, photo: photo?.image ?? null, stickers })
+        const blob = await new Promise<Blob>((resolve, reject) =>
+          canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('toBlob failed'))), 'image/png'),
+        )
+        if (cancelled) return
+        const url = URL.createObjectURL(blob)
+        setExported((prev) => {
+          if (prev) URL.revokeObjectURL(prev.url)
+          return { key: exportKey, file: new File([blob], fileName, { type: 'image/png' }), url }
+        })
+      } catch (e) {
+        console.error('Exporting story card failed', e)
+        if (!cancelled) setMessage(ts.drawFailed)
+      }
+    }, 300)
+    return () => {
+      cancelled = true
+      clearTimeout(timer)
+    }
+  }, [open, ready, exportKey, card, options, stickers, photo, fileName, ts.card, ts.drawFailed])
+
+  // 電腦版：產生給手機掃描的 QR code，在手機上開啟同一頁的打卡編輯器
+  useEffect(() => {
+    if (!open || mobile || qr) return
+    let cancelled = false
+    const url = `${window.location.origin}/training/log?date=${date}&share=1`
+    import('qrcode')
+      .then((QR) => QR.toDataURL(url, { width: 320, margin: 1 }))
+      .then((data) => !cancelled && setQr(data))
+      .catch((e) => console.error('QR code failed', e))
+    return () => {
+      cancelled = true
+    }
+  }, [open, mobile, qr, date])
 
   useEffect(() => {
     if (!open) return
     closeRef.current?.focus()
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false)
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false)
+    }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [open])
 
-  // 先把圖片產生好；分享必須在點擊當下呼叫，Safari 不允許等待太久
-  async function start() {
-    setOpen(true)
-    setMessage(null)
-    if (file) return
-    setStatus('drawing')
-    try {
-      const blob = await drawCard(card, ts.card)
-      const f = new File([blob], fileName, { type: 'image/png' })
-      setFile(f)
-      setUrl(URL.createObjectURL(blob))
-      setStatus('ready')
-    } catch (e) {
-      console.error('Drawing story card failed', e)
-      setStatus('error')
-    }
-  }
+  useEffect(() => () => photo?.image.close(), [photo])
 
-  const canShareFile = file !== null && typeof navigator !== 'undefined' && !!navigator.canShare?.({ files: [file] })
+  const canShareFile = mobile && current !== null && !!navigator.canShare?.({ files: [current.file] })
 
   async function share() {
-    if (!file) return
+    if (!current) return
+    setMessage(null)
     try {
       // 只帶檔案：附上文字時，部分 App 會只收文字或不顯示 Instagram
-      await navigator.share({ files: [file] })
+      await navigator.share({ files: [current.file] })
     } catch (e) {
       if (e instanceof DOMException && e.name === 'AbortError') return
       console.error('Sharing story card failed', e)
-      setMessage(ts.failed)
+      setMessage(ts.failed(e instanceof Error ? e.name : 'Error'))
     }
   }
+
+  // ---------- 編輯 ----------
+
+  const setOption = <K extends keyof StoryOptions>(key: K, value: StoryOptions[K]) => setOptions((o) => ({ ...o, [key]: value }))
+
+  function chooseTheme(theme: Theme) {
+    if (theme === 'photo' && !photo) {
+      photoInputRef.current?.click()
+      return
+    }
+    setOption('theme', theme)
+  }
+
+  async function onPhoto(e: React.ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0]
+    e.target.value = ''
+    if (!f) return
+    try {
+      // 照片只在瀏覽器裡使用，不會上傳
+      const image = await createImageBitmap(f)
+      setPhoto({ id: Date.now(), image })
+      setOption('theme', 'photo')
+    } catch (err) {
+      console.error('Reading background photo failed', err)
+      setMessage(ts.photoFailed)
+    }
+  }
+
+  function removePhoto() {
+    setPhoto(null)
+    setOption('theme', 'dark')
+  }
+
+  function addSticker(text: string, size: number) {
+    const value = [...text.trim()].slice(0, MAX_TEXT).join('')
+    if (!value) return
+    const id = crypto.randomUUID()
+    // 錯開位置，連續新增時不會疊在同一點
+    const offset = (stickers.length % 5) * 60
+    setStickers((list) => [...list, { id, text: value, x: W / 2, y: 820 + offset, size, color: null }])
+    setSelectedId(id)
+  }
+
+  const updateSelected = (patch: Partial<Sticker>) =>
+    setStickers((list) => list.map((s) => (s.id === selectedId ? { ...s, ...patch } : s)))
+
+  function removeSelected() {
+    setStickers((list) => list.filter((s) => s.id !== selectedId))
+    setSelectedId(null)
+  }
+
+  // ---------- 拖曳與雙指縮放 ----------
+
+  const pointers = useRef(new Map<number, { x: number; y: number }>())
+  const gesture = useRef<{ id: string; dx: number; dy: number; startDist: number; startSize: number } | null>(null)
+
+  function toCanvas(e: React.PointerEvent<HTMLCanvasElement>) {
+    const rect = e.currentTarget.getBoundingClientRect()
+    return { x: ((e.clientX - rect.left) / rect.width) * W, y: ((e.clientY - rect.top) / rect.height) * H }
+  }
+
+  function onPointerDown(e: React.PointerEvent<HTMLCanvasElement>) {
+    const p = toCanvas(e)
+    pointers.current.set(e.pointerId, p)
+    e.currentTarget.setPointerCapture(e.pointerId)
+
+    if (pointers.current.size === 2 && gesture.current) {
+      const [a, b] = [...pointers.current.values()]
+      const sticker = stickers.find((s) => s.id === gesture.current!.id)
+      gesture.current.startDist = Math.hypot(a.x - b.x, a.y - b.y)
+      gesture.current.startSize = sticker?.size ?? 96
+      return
+    }
+
+    const pad = 24
+    const hit = [...boxesRef.current]
+      .reverse()
+      .find((b) => p.x >= b.left - pad && p.x <= b.right + pad && p.y >= b.top - pad && p.y <= b.bottom + pad)
+    if (!hit) {
+      setSelectedId(null)
+      gesture.current = null
+      return
+    }
+    const sticker = stickers.find((s) => s.id === hit.id)!
+    setSelectedId(hit.id)
+    gesture.current = { id: hit.id, dx: p.x - sticker.x, dy: p.y - sticker.y, startDist: 0, startSize: sticker.size }
+  }
+
+  function onPointerMove(e: React.PointerEvent<HTMLCanvasElement>) {
+    if (!pointers.current.has(e.pointerId) || !gesture.current) return
+    const p = toCanvas(e)
+    pointers.current.set(e.pointerId, p)
+    const g = gesture.current
+
+    if (pointers.current.size >= 2 && g.startDist > 0) {
+      const [a, b] = [...pointers.current.values()]
+      const size = clamp(g.startSize * (Math.hypot(a.x - b.x, a.y - b.y) / g.startDist), MIN_SIZE, MAX_SIZE)
+      setStickers((list) => list.map((s) => (s.id === g.id ? { ...s, size } : s)))
+      return
+    }
+    const x = clamp(p.x - g.dx, 0, W)
+    const y = clamp(p.y - g.dy, 0, H)
+    setStickers((list) => list.map((s) => (s.id === g.id ? { ...s, x, y } : s)))
+  }
+
+  function onPointerUp(e: React.PointerEvent<HTMLCanvasElement>) {
+    pointers.current.delete(e.pointerId)
+    if (pointers.current.size === 0) {
+      gesture.current = null
+    } else if (gesture.current) {
+      // 放開一指後改回拖曳，避免剩下那一指造成跳動
+      const [rest] = [...pointers.current.values()]
+      const s = stickers.find((st) => st.id === gesture.current!.id)
+      if (s) gesture.current = { ...gesture.current, dx: rest.x - s.x, dy: rest.y - s.y, startDist: 0 }
+    }
+  }
+
+  const sectionLabel = 'mb-2 block text-xs font-semibold tracking-wider text-muted'
+  const chip = (active: boolean) =>
+    `min-h-10 border px-3 text-sm ${active ? 'border-foreground bg-foreground text-background' : 'border-line hover:border-foreground'}`
 
   return (
     <>
       <button
         type="button"
-        onClick={start}
+        onClick={() => {
+          setMessage(null)
+          setOpen(true)
+        }}
         className="inline-flex min-h-11 items-center gap-2 border border-foreground px-4 text-sm font-semibold hover:bg-foreground hover:text-background"
       >
         <InstagramIcon />
@@ -88,55 +309,206 @@ export default function StoryShare({ card, fileName }: { card: StoryCard; fileNa
       </button>
 
       {open && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="story-share-title"
-          className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 sm:items-center"
-          onClick={(e) => e.target === e.currentTarget && setOpen(false)}
-        >
-          <div className="max-h-full w-full max-w-md overflow-y-auto bg-background p-6">
-            <div className="flex items-center justify-between gap-4">
-              <h2 id="story-share-title" className="text-lg font-bold">
-                {ts.title}
-              </h2>
-              <button ref={closeRef} type="button" onClick={() => setOpen(false)} className="text-sm text-muted hover:text-foreground">
-                {t.common.close}
-              </button>
+        <div role="dialog" aria-modal="true" aria-labelledby="story-share-title" className="fixed inset-0 z-50 overflow-y-auto bg-background">
+          <div className="sticky top-0 z-10 flex items-center justify-between gap-4 border-b border-line bg-background px-4 py-3 sm:px-6">
+            <h2 id="story-share-title" className="text-lg font-bold">
+              {ts.title}
+            </h2>
+            <button ref={closeRef} type="button" onClick={() => setOpen(false)} className="min-h-10 px-2 text-sm text-muted hover:text-foreground">
+              {t.common.close}
+            </button>
+          </div>
+
+          <div className="mx-auto grid max-w-5xl gap-8 px-4 py-6 sm:px-6 md:grid-cols-[auto_minmax(0,1fr)]">
+            {/* 預覽：可直接拖曳文字與 emoji */}
+            <div className="flex flex-col items-center md:sticky md:top-20 md:self-start">
+              <canvas
+                ref={canvasRef}
+                width={W}
+                height={H}
+                aria-label={ts.previewAlt}
+                className="aspect-[9/16] h-[min(62vh,640px)] w-auto touch-none border border-line bg-stone"
+                onPointerDown={onPointerDown}
+                onPointerMove={onPointerMove}
+                onPointerUp={onPointerUp}
+                onPointerCancel={onPointerUp}
+              />
+              <p className="mt-2 max-w-xs text-center text-xs text-muted">{ts.dragHint}</p>
             </div>
 
-            <div className="mx-auto mt-4 aspect-[9/16] w-full max-w-[16rem] bg-stone">
-              {/* eslint-disable-next-line @next/next/no-img-element -- 本機產生的 blob 圖片，不需要最佳化 */}
-              {url && <img src={url} alt={ts.previewAlt} className="h-full w-full object-contain" />}
-              {status === 'drawing' && <p className="flex h-full items-center justify-center text-sm text-muted">{ts.preparing}</p>}
-              {status === 'error' && <p className="flex h-full items-center justify-center px-4 text-center text-sm text-accent">{ts.drawFailed}</p>}
-            </div>
+            <div className="min-w-0 space-y-7">
+              <label className="block">
+                <span className={sectionLabel}>{ts.titleLabel}</span>
+                <input
+                  type="text"
+                  value={options.title}
+                  maxLength={60}
+                  onChange={(e) => setOption('title', e.target.value)}
+                  className="block min-h-11 w-full border border-line bg-surface px-3 py-2.5 text-sm focus:border-foreground focus:outline-none"
+                />
+              </label>
 
-            {status === 'ready' && (
-              <div className="mt-6 space-y-3">
+              <fieldset>
+                <legend className={sectionLabel}>{ts.showLabel}</legend>
+                <div className="flex flex-wrap gap-2">
+                  {(
+                    [
+                      ['showRate', ts.show.rate],
+                      ['showStats', ts.show.stats],
+                      ['showExercises', ts.show.exercises],
+                      ['showName', ts.show.name],
+                    ] as const
+                  ).map(([key, label]) => (
+                    <button key={key} type="button" aria-pressed={options[key]} onClick={() => setOption(key, !options[key])} className={chip(options[key])}>
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </fieldset>
+
+              <fieldset>
+                <legend className={sectionLabel}>{ts.themeLabel}</legend>
+                <div className="flex flex-wrap items-center gap-2">
+                  {THEMES.map((theme) => (
+                    <button
+                      key={theme}
+                      type="button"
+                      aria-pressed={options.theme === theme}
+                      onClick={() => chooseTheme(theme)}
+                      className={`${chip(options.theme === theme)} inline-flex items-center gap-2`}
+                    >
+                      <span aria-hidden className="h-4 w-4 border border-line" style={{ background: theme === 'photo' ? 'linear-gradient(135deg,#6b7280,#111)' : PALETTES[theme].bg }} />
+                      {ts.themes[theme]}
+                    </button>
+                  ))}
+                  <input ref={photoInputRef} type="file" accept="image/*" className="sr-only" tabIndex={-1} aria-hidden onChange={onPhoto} />
+                </div>
+                {photo && (
+                  <div className="mt-2 flex gap-4 text-xs">
+                    <button type="button" onClick={() => photoInputRef.current?.click()} className="underline-offset-4 hover:underline">
+                      {ts.changePhoto}
+                    </button>
+                    <button type="button" onClick={removePhoto} className="text-muted underline-offset-4 hover:text-accent hover:underline">
+                      {ts.removePhoto}
+                    </button>
+                  </div>
+                )}
+                <p className="mt-2 text-xs text-muted">{ts.photoHint}</p>
+              </fieldset>
+
+              <div>
+                <span className={sectionLabel}>{ts.addLabel}</span>
+                <form
+                  className="flex gap-2"
+                  onSubmit={(e) => {
+                    e.preventDefault()
+                    addSticker(draft, 96)
+                    setDraft('')
+                  }}
+                >
+                  <input
+                    type="text"
+                    value={draft}
+                    maxLength={MAX_TEXT * 2}
+                    onChange={(e) => setDraft(e.target.value)}
+                    placeholder={ts.textPlaceholder}
+                    aria-label={ts.addLabel}
+                    className="block min-h-11 min-w-0 flex-1 border border-line bg-surface px-3 py-2.5 text-sm focus:border-foreground focus:outline-none"
+                  />
+                  <button type="submit" disabled={!draft.trim()} className="min-h-11 shrink-0 bg-foreground px-4 text-sm font-semibold text-background disabled:opacity-40">
+                    {ts.addText}
+                  </button>
+                </form>
+                <div className="mt-3 flex flex-wrap gap-1" role="group" aria-label={ts.emojiLabel}>
+                  {EMOJIS.map((emoji) => (
+                    <button key={emoji} type="button" onClick={() => addSticker(emoji, 160)} className="h-11 w-11 text-2xl hover:bg-stone" aria-label={ts.addEmoji(emoji)}>
+                      {emoji}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {selected && (
+                <div className="space-y-4 border border-line p-4">
+                  <p className="truncate text-sm font-semibold">{ts.selected(selected.text)}</p>
+                  <label className="block">
+                    <span className={sectionLabel}>{ts.size}</span>
+                    <input
+                      type="range"
+                      min={MIN_SIZE}
+                      max={MAX_SIZE}
+                      value={Math.round(selected.size)}
+                      onChange={(e) => updateSelected({ size: Number(e.target.value) })}
+                      className="w-full accent-current"
+                    />
+                  </label>
+                  <div>
+                    <span className={sectionLabel}>{ts.color}</span>
+                    <div className="flex gap-2">
+                      {STICKER_COLORS.map((color) => (
+                        <button
+                          key={color ?? 'auto'}
+                          type="button"
+                          aria-label={color ?? ts.autoColor}
+                          title={color ?? ts.autoColor}
+                          aria-pressed={selected.color === color}
+                          onClick={() => updateSelected({ color })}
+                          className={`h-9 w-9 border-2 text-[10px] font-semibold ${selected.color === color ? 'border-foreground' : 'border-line'}`}
+                          style={{ background: color ?? `linear-gradient(135deg, ${palette.bg} 50%, ${palette.fg} 50%)` }}
+                        >
+                          {color === null && <span className="sr-only">{ts.autoColor}</span>}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <button type="button" onClick={removeSelected} className="text-sm text-accent underline-offset-4 hover:underline">
+                    {ts.removeSticker}
+                  </button>
+                </div>
+              )}
+
+              {/* 分享與下載 */}
+              <div className="space-y-3 border-t border-line pt-6">
                 {canShareFile && (
-                  <button type="button" onClick={share} className="block min-h-11 w-full bg-foreground text-sm font-semibold text-background hover:opacity-85">
+                  <button type="button" onClick={share} className="block min-h-12 w-full bg-foreground text-sm font-semibold text-background hover:opacity-85">
                     {ts.share}
                   </button>
                 )}
                 <a
-                  href={url ?? undefined}
+                  href={current?.url}
                   download={fileName}
-                  className={`flex min-h-11 w-full items-center justify-center text-sm font-semibold ${
+                  aria-disabled={!ready}
+                  onClick={(e) => !ready && e.preventDefault()}
+                  className={`flex min-h-12 w-full items-center justify-center text-sm font-semibold ${
                     canShareFile ? 'border border-line hover:border-foreground' : 'bg-foreground text-background hover:opacity-85'
-                  }`}
+                  } ${ready ? '' : 'pointer-events-none opacity-50'}`}
                 >
-                  {ts.download}
+                  {ready ? ts.download : ts.preparing}
                 </a>
-                <p className="text-xs text-muted">{canShareFile ? ts.shareHint : ts.downloadHint}</p>
+                {mobile ? (
+                  <p className="text-xs text-muted">{canShareFile ? ts.shareHint : ts.downloadHint}</p>
+                ) : (
+                  <div className="flex items-start gap-4 bg-stone p-4">
+                    {/* eslint-disable-next-line @next/next/no-img-element -- 本機產生的 QR code */}
+                    {qr && <img src={qr} alt={ts.qrAlt} width={120} height={120} className="shrink-0 bg-white p-1" />}
+                    <div className="text-sm">
+                      <p className="font-semibold">{ts.desktopTitle}</p>
+                      <p className="mt-1 text-xs text-muted">{ts.desktopHint}</p>
+                    </div>
+                  </div>
+                )}
                 {message && <p className="text-xs text-accent">{message}</p>}
               </div>
-            )}
+            </div>
           </div>
         </div>
       )}
     </>
   )
+}
+
+function clamp(n: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, n))
 }
 
 function InstagramIcon() {
@@ -147,155 +519,4 @@ function InstagramIcon() {
       <circle cx="17.5" cy="6.5" r="0.8" fill="currentColor" stroke="none" />
     </svg>
   )
-}
-
-// ---------- 繪製 ----------
-
-type CardText = ReturnType<typeof useI18n>['t']['log']['share']['card']
-
-async function drawCard(card: StoryCard, text: CardText): Promise<Blob> {
-  await document.fonts.ready
-  // 沿用頁面字型，再接上各平台的中文字型
-  const family = `${getComputedStyle(document.body).fontFamily}, "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", sans-serif`
-  const font = (weight: number, size: number) => `${weight} ${size}px ${family}`
-
-  const canvas = document.createElement('canvas')
-  canvas.width = W
-  canvas.height = H
-  const ctx = canvas.getContext('2d')
-  if (!ctx) throw new Error('Canvas 2D is not supported')
-  ctx.textBaseline = 'alphabetic'
-
-  ctx.fillStyle = COLORS.bg
-  ctx.fillRect(0, 0, W, H)
-
-  // 品牌
-  let y = 300
-  ctx.fillStyle = COLORS.accent
-  ctx.beginPath()
-  ctx.arc(PAD + 14, y - 14, 14, 0, Math.PI * 2)
-  ctx.fill()
-  ctx.fillStyle = COLORS.fg
-  ctx.font = font(900, 40)
-  spacedText(ctx, 'NOVANEST', PAD + 46, y, 8)
-
-  // 日期與課表
-  y += 110
-  ctx.fillStyle = COLORS.muted
-  ctx.font = font(600, 40)
-  ctx.fillText(card.date, PAD, y)
-  ctx.fillStyle = COLORS.fg
-  ctx.font = font(800, 84)
-  for (const line of wrap(ctx, card.title, W - PAD * 2, 2)) {
-    y += 100
-    ctx.fillText(line, PAD, y)
-  }
-
-  // 完成率
-  y += 120
-  ctx.fillStyle = COLORS.muted
-  ctx.font = font(600, 36)
-  ctx.fillText(text.completion, PAD, y)
-  y += 230
-  ctx.fillStyle = COLORS.fg
-  ctx.font = font(900, 240)
-  ctx.fillText(card.rate, PAD - 8, y)
-
-  // 組數與訓練量
-  y += 100
-  const colW = (W - PAD * 2) / 2
-  const stats = [
-    [text.sets, `${card.completedSets} / ${card.plannedSets}`],
-    [text.volume, card.volumeKg > 0 ? `${Math.round(card.volumeKg).toLocaleString('en-US')} kg` : '—'],
-  ]
-  stats.forEach(([label, value], i) => {
-    const x = PAD + colW * i
-    ctx.fillStyle = COLORS.muted
-    ctx.font = font(600, 34)
-    ctx.fillText(label, x, y)
-    ctx.fillStyle = COLORS.fg
-    ctx.font = font(800, 64)
-    ctx.fillText(value, x, y + 78)
-  })
-
-  // 動作清單
-  y += 140
-  ctx.fillStyle = COLORS.line
-  ctx.fillRect(PAD, y, W - PAD * 2, 2)
-  y += 20
-  const rowH = 70
-  const bottom = 1560
-  const maxRows = Math.floor((bottom - y) / rowH)
-  const shown = card.exercises.length > maxRows ? card.exercises.slice(0, maxRows - 1) : card.exercises
-  for (const e of shown) {
-    y += rowH
-    const right = e.best ? `${text.setCount(e.sets)} · ${e.best}` : text.setCount(e.sets)
-    ctx.font = font(500, 36)
-    const rightW = ctx.measureText(right).width
-    ctx.fillStyle = COLORS.muted
-    ctx.textAlign = 'right'
-    ctx.fillText(right, W - PAD, y)
-    ctx.textAlign = 'left'
-    ctx.fillStyle = COLORS.fg
-    ctx.font = font(700, 40)
-    ctx.fillText(ellipsize(ctx, e.name, W - PAD * 2 - rightW - 40), PAD, y)
-  }
-  if (shown.length < card.exercises.length) {
-    y += rowH
-    ctx.fillStyle = COLORS.muted
-    ctx.font = font(500, 36)
-    ctx.fillText(text.more(card.exercises.length - shown.length), PAD, y)
-  }
-
-  // 名稱與完成標記
-  const footY = 1680
-  ctx.fillStyle = COLORS.line
-  ctx.fillRect(PAD, footY - 80, W - PAD * 2, 2)
-  ctx.fillStyle = COLORS.accent
-  ctx.font = font(900, 32)
-  ctx.textAlign = 'right'
-  const done = `✓ ${text.done}`
-  ctx.fillText(done, W - PAD, footY)
-  const doneW = ctx.measureText(done).width
-  ctx.textAlign = 'left'
-  ctx.fillStyle = COLORS.fg
-  ctx.font = font(800, 44)
-  ctx.fillText(ellipsize(ctx, card.name, W - PAD * 2 - doneW - 40), PAD, footY)
-
-  return new Promise((resolve, reject) => canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('toBlob failed'))), 'image/png'))
-}
-
-function spacedText(ctx: CanvasRenderingContext2D, s: string, x: number, y: number, spacing: number) {
-  for (const ch of s) {
-    ctx.fillText(ch, x, y)
-    x += ctx.measureText(ch).width + spacing
-  }
-}
-
-// 中文逐字換行、英文以單字換行；超過行數時最後一行加上省略號
-function wrap(ctx: CanvasRenderingContext2D, s: string, maxWidth: number, maxLines: number): string[] {
-  const tokens = s.match(/[⺀-鿿豈-﫿＀-￯]|\s+|[^\s⺀-鿿豈-﫿＀-￯]+/g) ?? []
-  const lines: string[] = []
-  let line = ''
-  for (const token of tokens) {
-    const next = line + token
-    if (ctx.measureText(next).width <= maxWidth || line === '') {
-      line = next
-    } else {
-      lines.push(line.trimEnd())
-      line = token.trimStart()
-    }
-  }
-  if (line) lines.push(line.trimEnd())
-  if (lines.length <= maxLines) return lines
-  const kept = lines.slice(0, maxLines)
-  kept[maxLines - 1] = ellipsize(ctx, `${kept[maxLines - 1]}${lines[maxLines]}`, maxWidth)
-  return kept
-}
-
-function ellipsize(ctx: CanvasRenderingContext2D, s: string, maxWidth: number): string {
-  if (ctx.measureText(s).width <= maxWidth) return s
-  const chars = [...s]
-  while (chars.length > 0 && ctx.measureText(`${chars.join('')}…`).width > maxWidth) chars.pop()
-  return `${chars.join('')}…`
 }
