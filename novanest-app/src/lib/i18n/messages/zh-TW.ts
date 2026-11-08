@@ -687,6 +687,7 @@ const zhTW = {
     title: '更新紀錄',
     intro: '每一版新增或改善的功能。',
     current: '目前版本',
+    link: '更新紀錄',
   },
   aiLimit: {
     features: { food_image: '照片與營養標示分析', food_name: '食物名稱估算', plan: '產生課表', plan_translate: '課表翻譯' },

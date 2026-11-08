@@ -22,10 +22,13 @@ const MUSCLE_SLUGS: Record<Muscle, Slug[]> = {
 }
 const NEUTRAL_SLUGS: Slug[] = ['head', 'neck', 'hands', 'feet', 'ankles', 'knees', 'forearm', 'tibialis']
 
-// SVG 屬性無法使用 CSS 變數，所以依主題挑顏色
+// SVG 屬性無法使用 CSS 變數，所以依主題挑顏色。
+// 肌肉之間的分隔線用背景色畫，所以各部位要和背景拉開明暗差距才看得出線條：
+// 淺色模式是「淺灰部位＋白線」，深色模式反過來用「中灰部位＋黑線」，未安排的肌群與背景至少 3:1。
+// upcoming 要和 globals.css 的 --status-upcoming 一致（圖例與進度條用）。
 const COLORS = {
   light: { silhouette: '#ecebe7', hair: '#d6d4ce', unplanned: '#dddcd6', upcoming: '#c3c2b7', gap: '#ffffff', border: '#c9c7c0', selected: '#000000' },
-  dark: { silhouette: '#2b2b28', hair: '#3a3a36', unplanned: '#3a3a36', upcoming: '#5e5d57', gap: '#0e0e0e', border: '#4a4a45', selected: '#ffffff' },
+  dark: { silhouette: '#5c5c56', hair: '#46463f', unplanned: '#78776f', upcoming: '#9e9d93', gap: '#0e0e0e', border: '#9e9d93', selected: '#ffffff' },
 }
 const STATUS_COLORS: Record<Exclude<MuscleStatus, 'upcoming'>, string> = { good: '#0ca30c', warning: '#fab219', critical: '#d03b3b' }
 

@@ -686,6 +686,7 @@ const en: Messages = {
     title: 'What’s new',
     intro: 'New features and improvements in each version.',
     current: 'Current',
+    link: 'What’s new',
   },
   aiLimit: {
     features: { food_image: 'photo and label analysis', food_name: 'food name estimates', plan: 'plan generation', plan_translate: 'plan translations' },

@@ -10,6 +10,14 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.1',
+    date: '2026-11-08',
+    items: {
+      'zh-TW': ['深色模式下，訓練紀錄頁的肌肉圖線條與輪廓更清楚', '每一頁最下方都可以點「更新紀錄」查看各版本的新功能'],
+      en: ['Clearer muscle outlines on the training log’s muscle map in dark mode', 'A “What’s new” link at the bottom of every page shows each version’s changes'],
+    },
+  },
+  {
     version: '1.1.0',
     date: '2026-11-08',
     items: {

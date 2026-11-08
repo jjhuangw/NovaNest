@@ -71,6 +71,17 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         </nav>
         <WhatsNew version={CHANGELOG[0].version} items={CHANGELOG[0].items[locale]} />
         <main>{children}</main>
+        {/* 頁尾：版本與更新紀錄，關掉新功能通知後仍可以隨時查看 */}
+        <footer className="border-t border-line">
+          <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-2 px-6 py-6 text-xs text-muted">
+            <span>
+              NovaNest v{CHANGELOG[0].version}
+            </span>
+            <Link href="/changelog" className="font-semibold underline-offset-4 hover:text-foreground hover:underline">
+              {t.changelog.link}
+            </Link>
+          </div>
+        </footer>
       </div>
     </I18nProvider>
   )

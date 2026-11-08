@@ -42,7 +42,7 @@
     --surface: #161615;
     --track: #2b2b28;
     --warning-text: #fab219;
-    --status-upcoming: #5e5d57;
+    --status-upcoming: #9e9d93;
   }
 }
 
@@ -57,7 +57,7 @@
   --surface: #161615;
   --track: #2b2b28;
   --warning-text: #fab219;
-  --status-upcoming: #5e5d57;
+  --status-upcoming: #9e9d93;
 }
 
 @theme inline {
