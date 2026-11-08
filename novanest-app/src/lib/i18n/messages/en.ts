@@ -336,9 +336,16 @@ const en: Messages = {
     notesPlaceholder: 'How you felt, sleep, any discomfort…',
     restShort: 'Rest',
     share: {
-      button: 'Share to IG',
+      button: 'Share workout',
       savedOnly: 'The image uses your saved log',
       title: 'Edit story card',
+      threads: {
+        shareImage: 'Share image to Threads',
+        postText: 'Post text + link to Threads',
+        hintMobile: 'When sharing the image, choose Threads. The caption is copied too, so paste it if it isn’t filled in.',
+        hintDesktop: 'Opens the Threads composer with today’s results and a link to NovaNest (no image). To include the image, share from your phone or download it first.',
+        caption: (title, rate, volume) => `Finished “${title}” today: ${rate} done${volume ? `, ${volume} total volume` : ''} 💪\n#NovaNest Train into a new you`,
+      },
       previewAlt: 'Story card preview',
       dragHint: 'Tap text or an emoji to drag it. Pinch with two fingers to resize on a phone.',
       titleLabel: 'Title',

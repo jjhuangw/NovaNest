@@ -335,9 +335,17 @@ const zhTW = {
     notesPlaceholder: '今天的狀態、睡眠、哪裡不舒服…',
     restShort: '休',
     share: {
-      button: '打卡到 IG',
+      button: '打卡分享',
       savedOnly: '圖片以已儲存的紀錄產生',
       title: '編輯打卡圖',
+      threads: {
+        shareImage: '分享圖片到 Threads',
+        postText: '用文字＋連結發到 Threads',
+        hintMobile: '分享圖片時，在選單選 Threads；貼文文字已同時複製，沒有自動帶入的話直接貼上即可。',
+        hintDesktop: '會開啟 Threads 的發文畫面，帶入今天的成果與 NovaNest 介紹頁的連結（不含圖片）。要附圖請用手機分享，或先下載圖片。',
+        caption: (title: string, rate: string, volume: string | null) =>
+          `今天完成「${title}」，完成率 ${rate}${volume ? `、總訓練量 ${volume}` : ''} 💪\n#NovaNest 練出新的自己`,
+      },
       previewAlt: '打卡圖預覽',
       dragHint: '點選文字或 emoji 可拖曳移動；手機上用兩指縮放。',
       titleLabel: '標題',

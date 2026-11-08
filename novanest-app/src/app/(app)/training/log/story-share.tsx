@@ -161,6 +161,33 @@ export default function StoryShare({
 
   const canShareFile = mobile && current !== null && !!navigator.canShare?.({ files: [current.file] })
 
+  // Threads：貼文文字附上產品介紹頁的連結（UTM 參數用來統計從 Threads 來的訪客）
+  function threadsCaption() {
+    const link = `${window.location.origin}/about?utm_source=threads&utm_medium=social&utm_campaign=workout_share`
+    const volume = card.volumeKg > 0 ? `${Math.round(card.volumeKg).toLocaleString('en-US')} kg` : null
+    return `${ts.threads.caption(options.title.trim() || card.title, card.rate, volume)}\n${link}`
+  }
+
+  // 圖片＋文字：部分 App 收到圖片時會忽略文字，所以同時把文字複製起來，讓使用者可以直接貼上。
+  // 兩個呼叫都在點擊當下送出，不等待複製完成，避免 Safari 認為分享不是使用者觸發的。
+  function shareImageToThreads() {
+    if (!current) return
+    setMessage(null)
+    const caption = threadsCaption()
+    navigator.clipboard?.writeText(caption).catch(() => {})
+    navigator.share({ files: [current.file], text: caption }).catch((e: unknown) => {
+      if (e instanceof DOMException && e.name === 'AbortError') return
+      console.error('Sharing to Threads failed', e)
+      setMessage(ts.failed(e instanceof Error ? e.name : 'Error'))
+    })
+  }
+
+  // 文字＋連結：開啟 Threads 的發文畫面（手機會開啟 App），不含圖片
+  function postTextToThreads() {
+    const url = `https://www.threads.com/intent/post?text=${encodeURIComponent(threadsCaption())}`
+    window.open(url, '_blank', 'noopener,noreferrer')
+  }
+
   async function share() {
     if (!current) return
     setMessage(null)
@@ -498,6 +525,23 @@ export default function StoryShare({
                   </div>
                 )}
                 {message && <p className="text-xs text-accent">{message}</p>}
+
+                {/* Threads */}
+                <div className="space-y-3 border-t border-line pt-6">
+                  <p className="inline-flex items-center gap-2 text-sm font-semibold">
+                    <ThreadsIcon />
+                    Threads
+                  </p>
+                  {canShareFile && (
+                    <button type="button" onClick={shareImageToThreads} className="block min-h-12 w-full border border-foreground text-sm font-semibold hover:bg-foreground hover:text-background">
+                      {ts.threads.shareImage}
+                    </button>
+                  )}
+                  <button type="button" onClick={postTextToThreads} className="block min-h-12 w-full border border-line text-sm font-semibold hover:border-foreground">
+                    {ts.threads.postText}
+                  </button>
+                  <p className="text-xs text-muted">{canShareFile ? ts.threads.hintMobile : ts.threads.hintDesktop}</p>
+                </div>
               </div>
             </div>
           </div>
@@ -509,6 +553,15 @@ export default function StoryShare({
 
 function clamp(n: number, min: number, max: number) {
   return Math.min(max, Math.max(min, n))
+}
+
+function ThreadsIcon() {
+  return (
+    <svg aria-hidden viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round">
+      <path d="M16.5 11.2c-.4-2.4-2-3.7-4.4-3.7-2.7 0-4.4 1.9-4.4 4.6s1.7 4.4 4.2 4.4c2.3 0 3.6-1.3 3.6-3.1 0-1.6-1.2-2.6-3-2.6-1.5 0-2.5.8-2.5 1.9 0 1 .8 1.6 1.9 1.6" />
+      <path d="M19.5 8.5C18.4 5 15.6 3 12 3 6.9 3 3.5 6.6 3.5 12s3.4 9 8.5 9c3.4 0 6-1.5 7.2-4" />
+    </svg>
+  )
 }
 
 function InstagramIcon() {
