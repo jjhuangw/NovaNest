@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { connection } from 'next/server'
 import { loadForUser } from '@/lib/auth/session'
 import { getI18n } from '@/lib/i18n/server'
 import type { Messages } from '@/lib/i18n/messages'
@@ -24,6 +25,8 @@ export const instant = false
 
 export default async function NutritionPage(props: PageProps<'/nutrition'>) {
   const params = await props.searchParams
+  // 「今天」必須依每次請求計算，不能在預先渲染時決定
+  await connection()
   const today = todayISO()
   const date = isISODate(params.date) ? params.date : today
   const week = { from: weekStart(date), to: addDays(weekStart(date), 6) }

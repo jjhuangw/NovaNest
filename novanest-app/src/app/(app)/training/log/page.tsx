@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { connection } from 'next/server'
 import { loadForUser } from '@/lib/auth/session'
 import { computeCompletion, formatRate, type DayCompletion, type DayStatus } from '@/lib/training/completion'
 import {
@@ -30,6 +31,8 @@ export const instant = false
 
 export default async function TrainingLogPage(props: PageProps<'/training/log'>) {
   const params = await props.searchParams
+  // 「今天」必須依每次請求計算，不能在預先渲染時決定
+  await connection()
   const today = todayISO()
   const date = isISODate(params.date) ? params.date : today
   const savedAt = typeof params.saved === 'string' ? params.saved : null

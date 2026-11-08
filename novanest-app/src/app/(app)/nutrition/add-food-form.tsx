@@ -11,7 +11,7 @@ import {
   MACROS,
   MAX_ITEMS_PER_SAVE,
   MEALS,
-  scaleNutrients,
+  round,
   sumNutrients,
   UNITS,
   type FoodItem,
@@ -21,17 +21,38 @@ import {
 } from '@/lib/nutrition/nutrients'
 import { checkImage, compressImage, imageProblemMessage } from '@/lib/photos/compress'
 import { ACCEPT_ATTR } from '@/lib/photos/limits'
+import { macroRatio, parseWeight, scaleAmount } from '@/lib/nutrition/portion'
 import { analyzeFoodAction, estimateFoodAction, saveFoodAction } from './actions'
 
-// 編輯中的一項食物：營養素為「每份」的值，存檔時才乘上份數
+type Base = Record<NutrientKey, number | null>
+
+// 編輯中的一項食物。base 是「一份」（份量欄位描述的量）的營養素，
+// values 是乘上份量倍數後、實際吃下的量，也就是畫面上顯示與存檔的數值。
+// 調整倍數或克數時由 base 重新計算 values；直接修改營養素時反推回 base。
 interface Draft {
   key: number
   name: string
   amount: string
   servings: string
+  // 使用者直接輸入的克數（null 表示依倍數換算顯示）
+  gramsText: string | null
+  base: Base
   values: Record<NutrientKey, string>
   // 最近一次依名稱帶入營養素時的名稱，避免同一個名稱重複查詢
   estimatedFor: string | null
+  // 營養素是否由 AI 依名稱帶入（查詢失敗時不顯示 AI 說明）
+  estimated: boolean
+}
+
+const NUTRIENT_KEYS = [...MACROS, ...EXTRAS] as const
+const PORTIONS = [0.5, 0.75, 1, 1.5, 2]
+
+function baseFrom(item: FoodItem): Base {
+  return Object.fromEntries(NUTRIENT_KEYS.map((k) => [k, item[k]])) as Base
+}
+
+function valuesFor(base: Base, factor: number): Record<NutrientKey, string> {
+  return Object.fromEntries(NUTRIENT_KEYS.map((k) => [k, base[k] === null ? '' : String(round(base[k]! * factor, k))])) as Record<NutrientKey, string>
 }
 
 let nextKey = 0
@@ -42,26 +63,16 @@ function emptyDraft(): Draft {
     name: '',
     amount: '',
     servings: '1',
+    gramsText: null,
+    base: { kcal: null, proteinG: null, carbsG: null, fatG: null, fiberG: null, sugarG: null, sodiumMg: null },
     values: { kcal: '', proteinG: '', carbsG: '', fatG: '', fiberG: '', sugarG: '', sodiumMg: '' },
     estimatedFor: null,
-  }
-}
-
-function valuesFrom(item: FoodItem): Record<NutrientKey, string> {
-  const str = (v: number | null) => (v === null ? '' : String(v))
-  return {
-    kcal: str(item.kcal),
-    proteinG: str(item.proteinG),
-    carbsG: str(item.carbsG),
-    fatG: str(item.fatG),
-    fiberG: str(item.fiberG),
-    sugarG: str(item.sugarG),
-    sodiumMg: str(item.sodiumMg),
+    estimated: false,
   }
 }
 
 function draftFrom(item: FoodItem): Draft {
-  return { key: nextKey++, name: item.name, amount: item.amount ?? '', servings: '1', values: valuesFrom(item), estimatedFor: null }
+  return { ...emptyDraft(), name: item.name, amount: item.amount ?? '', base: baseFrom(item), values: valuesFor(baseFrom(item), 1) }
 }
 
 const hasMacros = (d: Draft) => MACROS.some((k) => d.values[k].trim() !== '')
@@ -77,12 +88,11 @@ function servingsOf(d: Draft) {
   return n !== null && n > 0 ? n : 1
 }
 
-// 轉成實際吃下的量；必填的四項留空視為 0
+// 畫面上的數值已是實際吃下的量；份量文字依倍數調整。必填的四項留空視為 0
 function toItem(d: Draft): FoodItem {
-  const servings = servingsOf(d)
-  const perServing = {
+  return {
     name: d.name.trim(),
-    amount: d.amount.trim() || null,
+    amount: scaleAmount(d.amount, servingsOf(d)) || null,
     kcal: parseNumber(d.values.kcal) ?? 0,
     proteinG: parseNumber(d.values.proteinG) ?? 0,
     carbsG: parseNumber(d.values.carbsG) ?? 0,
@@ -91,14 +101,28 @@ function toItem(d: Draft): FoodItem {
     sugarG: parseNumber(d.values.sugarG),
     sodiumMg: parseNumber(d.values.sodiumMg),
   }
-  const item = scaleNutrients(perServing, servings)
-  if (servings !== 1) item.amount = `${perServing.amount ?? ''} × ${servings}`.trim()
-  return item
+}
+
+// 調整倍數：由一份的營養素重新計算（沒有基準值的欄位維持原樣）
+function withServings(d: Draft, servings: string, gramsText: string | null = null): Draft {
+  const n = parseNumber(servings)
+  if (n === null || n <= 0) return { ...d, servings, gramsText }
+  const scaled = valuesFor(d.base, n)
+  const values = Object.fromEntries(NUTRIENT_KEYS.map((k) => [k, d.base[k] === null ? d.values[k] : scaled[k]])) as Draft['values']
+  return { ...d, servings, gramsText, values }
+}
+
+// 直接修改營養素：反推回一份的值，之後調整份量才會以修改後的數值為準
+function withValue(d: Draft, key: NutrientKey, value: string): Draft {
+  const v = parseNumber(value)
+  return { ...d, values: { ...d.values, [key]: value }, base: { ...d.base, [key]: v === null ? null : v / servingsOf(d) } }
 }
 
 const inputClass =
   'block min-h-11 w-full min-w-0 border border-line bg-surface px-3 py-2 text-sm tabular-nums placeholder-muted/60 focus:border-foreground focus:outline-none'
 const labelClass = 'mb-1.5 block text-xs font-semibold uppercase tracking-wider'
+const smallInputClass =
+  'block min-h-9 border border-line bg-surface px-2 py-1.5 text-sm tabular-nums focus:border-foreground focus:outline-none'
 
 export default function AddFoodForm({ date, defaultMeal }: { date: string; defaultMeal: Meal }) {
   const router = useRouter()
@@ -200,7 +224,10 @@ export default function AddFoodForm({ date, defaultMeal }: { date: string; defau
       setDrafts((ds) =>
         ds.map((x) =>
           x.key === d.key
-            ? { ...x, amount: x.amount.trim() || (result.item.amount ?? ''), values: valuesFrom(result.item), estimatedFor: name }
+            ? withServings(
+                { ...x, amount: x.amount.trim() || (result.item.amount ?? ''), base: baseFrom(result.item), estimatedFor: name, estimated: true },
+                x.servings,
+              )
             : x,
         ),
       )
@@ -222,7 +249,11 @@ export default function AddFoodForm({ date, defaultMeal }: { date: string; defau
   }
 
   function updateValue(key: number, nutrient: NutrientKey, value: string) {
-    setDrafts((ds) => ds.map((d) => (d.key === key ? { ...d, values: { ...d.values, [nutrient]: value } } : d)))
+    setDrafts((ds) => ds.map((d) => (d.key === key ? withValue(d, nutrient, value) : d)))
+  }
+
+  function updatePortion(key: number, servings: string, gramsText: string | null = null) {
+    setDrafts((ds) => ds.map((d) => (d.key === key ? withServings(d, servings, gramsText) : d)))
   }
 
   function save() {
@@ -343,13 +374,13 @@ export default function AddFoodForm({ date, defaultMeal }: { date: string; defau
                 draft={d}
                 index={i}
                 canRemove={drafts.length > 1}
-                showServings={mode === 'label'}
                 estimating={estimatingKey === d.key}
                 onEstimate={() => estimate(d)}
                 onNameBlur={() => autoEstimate(d)}
                 t={t}
                 onChange={(patch) => update(d.key, patch)}
                 onValue={(k, v) => updateValue(d.key, k, v)}
+                onPortion={(servings, gramsText) => updatePortion(d.key, servings, gramsText)}
                 onRemove={() => setDrafts((ds) => ds.filter((x) => x.key !== d.key))}
               />
             ))}
@@ -365,14 +396,17 @@ export default function AddFoodForm({ date, defaultMeal }: { date: string; defau
             </button>
           )}
 
-          <div className="mt-6 flex flex-wrap items-baseline gap-x-5 gap-y-1 border-t border-foreground pt-3 text-sm">
-            <span className="font-bold">{t.total}</span>
-            {MACROS.map((k) => (
-              <span key={k} className="tabular-nums">
-                <span className="text-muted">{t.nutrientsShort[k]} </span>
-                {formatAmount(total[k], k)} {UNITS[k]}
-              </span>
-            ))}
+          <div className="mt-6 border-t border-foreground pt-3 text-sm">
+            <div className="flex flex-wrap items-baseline gap-x-5 gap-y-1">
+              <span className="font-bold">{t.total}</span>
+              {MACROS.map((k) => (
+                <span key={k} className="tabular-nums">
+                  <span className="text-muted">{t.nutrientsShort[k]} </span>
+                  {formatAmount(total[k], k)} {UNITS[k]}
+                </span>
+              ))}
+            </div>
+            <MacroRatio proteinG={total.proteinG} carbsG={total.carbsG} fatG={total.fatG} t={t} />
           </div>
 
           <div className="mt-6 flex flex-wrap items-center gap-4">
@@ -400,28 +434,30 @@ function DraftEditor({
   draft,
   index,
   canRemove,
-  showServings,
   estimating,
   onEstimate,
   onNameBlur,
   t,
   onChange,
   onValue,
+  onPortion,
   onRemove,
 }: {
   draft: Draft
   index: number
   canRemove: boolean
-  showServings: boolean
   estimating: boolean
   onEstimate: () => void
   onNameBlur: () => void
   t: Messages['nutrition']
   onChange: (patch: Partial<Draft>) => void
   onValue: (key: NutrientKey, value: string) => void
+  onPortion: (servings: string, gramsText: string | null) => void
   onRemove: () => void
 }) {
   const id = useId()
+  const weight = parseWeight(draft.amount)
+  const factor = parseNumber(draft.servings)
   const hasExtras = EXTRAS.some((k) => draft.values[k] !== '')
   return (
     <li className="border-b border-line pb-6">
@@ -477,7 +513,7 @@ function DraftEditor({
         </label>
       </div>
 
-      {draft.estimatedFor !== null && draft.estimatedFor === draft.name.trim() && hasMacros(draft) && (
+      {draft.estimated && draft.estimatedFor === draft.name.trim() && hasMacros(draft) && (
         <p className="mt-2 text-xs text-muted">{t.estimatedNote}</p>
       )}
 
@@ -486,23 +522,70 @@ function DraftEditor({
           <NutrientInput key={k} id={`${id}-${k}`} nutrient={k} label={t.withUnit(t.nutrients[k], UNITS[k])} value={draft.values[k]} onChange={(v) => onValue(k, v)} />
         ))}
       </div>
+      <MacroRatio
+        proteinG={parseNumber(draft.values.proteinG) ?? 0}
+        carbsG={parseNumber(draft.values.carbsG) ?? 0}
+        fatG={parseNumber(draft.values.fatG) ?? 0}
+        t={t}
+      />
 
-      {showServings && (
-        <label className="mt-3 flex items-center gap-3">
-          <span className="text-xs font-semibold uppercase tracking-wider">{t.servings}</span>
-          <input
-            type="number"
-            inputMode="decimal"
-            min={0.1}
-            max={50}
-            step={0.1}
-            value={draft.servings}
-            onChange={(e) => onChange({ servings: e.target.value })}
-            className={`${inputClass} w-24`}
-          />
-          <span className="text-xs text-muted">{t.servingsHint}</span>
-        </label>
-      )}
+      {/* 份量：倍數或克數，營養素依一份的數值自動重新計算 */}
+      <fieldset className="mt-3">
+        <legend className="mb-1.5 text-xs font-semibold uppercase tracking-wider">{t.portion}</legend>
+        <div className="flex flex-wrap items-center gap-2">
+          {PORTIONS.map((p) => (
+            <button
+              key={p}
+              type="button"
+              aria-pressed={factor === p}
+              onClick={() => onPortion(String(p), null)}
+              className={`min-h-9 min-w-11 border px-2 text-sm tabular-nums ${factor === p ? 'border-foreground bg-foreground text-background' : 'border-line hover:border-foreground'}`}
+            >
+              {t.portionLabel(p)}
+            </button>
+          ))}
+          <label className="flex items-center gap-1.5 text-sm">
+            <input
+              type="number"
+              inputMode="decimal"
+              min={0.05}
+              max={50}
+              step={0.05}
+              value={draft.servings}
+              onChange={(e) => onPortion(e.target.value, null)}
+              aria-label={t.portionFactor}
+              className={`${smallInputClass} w-20`}
+            />
+            <span className="text-muted">×</span>
+          </label>
+          {weight && (
+            <label className="flex items-center gap-1.5 text-sm">
+              <span className="text-muted">≈</span>
+              <input
+                type="number"
+                inputMode="decimal"
+                min={1}
+                step={1}
+                value={draft.gramsText ?? (factor !== null && factor > 0 ? String(Math.round(weight.value * factor * 10) / 10) : '')}
+                onChange={(e) => {
+                  const g = parseNumber(e.target.value)
+                  onPortion(g !== null && g > 0 ? String(Math.round((g / weight.value) * 10000) / 10000) : draft.servings, e.target.value)
+                }}
+                aria-label={t.portionWeight(weight.unit)}
+                className={`${smallInputClass} w-24`}
+              />
+              <span className="text-muted">{weight.unit}</span>
+            </label>
+          )}
+        </div>
+        <p className="mt-1.5 text-xs text-muted">
+          {factor !== null && factor > 0 && factor !== 1 && draft.amount.trim()
+            ? t.portionResult(scaleAmount(draft.amount, factor))
+            : weight
+              ? t.portionHintWeight
+              : t.portionHint}
+        </p>
+      </fieldset>
 
       <details className="mt-3" open={hasExtras}>
         <summary className="cursor-pointer text-xs font-semibold text-muted">{t.extras}</summary>
@@ -544,6 +627,33 @@ function NutrientInput({
         onChange={(e) => onChange(e.target.value)}
         className={inputClass}
       />
+    </div>
+  )
+}
+
+// 三大營養素占熱量的比例，數值一改就跟著更新
+const RATIO_COLORS = { proteinG: 'bg-accent', carbsG: 'bg-foreground', fatG: 'bg-muted' } as const
+
+function MacroRatio({ proteinG, carbsG, fatG, t }: { proteinG: number; carbsG: number; fatG: number; t: Messages['nutrition'] }) {
+  const ratio = macroRatio(proteinG, carbsG, fatG)
+  if (!ratio) return null
+  const keys = ['proteinG', 'carbsG', 'fatG'] as const
+  return (
+    <div className="mt-3">
+      <div className="flex h-1.5 w-full overflow-hidden bg-track" aria-hidden>
+        {keys.map((k) => (
+          <span key={k} className={RATIO_COLORS[k]} style={{ width: `${ratio[k]}%` }} />
+        ))}
+      </div>
+      <p className="mt-1.5 flex flex-wrap gap-x-4 text-xs text-muted">
+        <span className="font-semibold text-foreground">{t.ratioLabel}</span>
+        {keys.map((k) => (
+          <span key={k} className="inline-flex items-center gap-1.5 tabular-nums">
+            <span aria-hidden className={`h-2 w-2 ${RATIO_COLORS[k]}`} />
+            {t.nutrientsShort[k]} {ratio[k]}%
+          </span>
+        ))}
+      </p>
     </div>
   )
 }
