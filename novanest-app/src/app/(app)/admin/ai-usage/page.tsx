@@ -2,18 +2,19 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { getAiUsageReport, USAGE_PERIODS, type UsageTotals } from '@/lib/admin/queries'
 import { BURST_LIMIT, DAILY_LIMITS, globalDailyLimit, globalUsageToday } from '@/lib/ai/limits'
-import { requireAdmin } from '@/lib/auth/session'
+import { loadForAdmin } from '@/lib/auth/session'
 import { getI18n } from '@/lib/i18n/server'
 import { formatInt, formatUsd, tableClass, tdClass, thClass } from '../format'
 
 export const instant = false
 
 export default async function AdminAiUsagePage(props: PageProps<'/admin/ai-usage'>) {
-  if (!(await requireAdmin())) notFound()
   const params = await props.searchParams
   const days = USAGE_PERIODS.find((d) => String(d) === params.days) ?? 30
 
-  const [report, todayCalls, { t }] = await Promise.all([getAiUsageReport(days), globalUsageToday(), getI18n()])
+  const result = await loadForAdmin(() => Promise.all([getAiUsageReport(days), globalUsageToday(), getI18n()]))
+  if (!result) notFound()
+  const [report, todayCalls, { t }] = result.data
   const tg = t.admin.usage
   const dayRows = [...report.byDay.entries()].sort(([a], [b]) => b.localeCompare(a))
   const modelRows = [...report.byModel.entries()].sort(([, a], [, b]) => b.costUsd - a.costUsd)

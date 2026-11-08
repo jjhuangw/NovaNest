@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { SavedToast } from '@/components/form-feedback'
 import { listUsers, USERS_PAGE_SIZE, type UserFilter } from '@/lib/admin/queries'
-import { requireAdmin } from '@/lib/auth/session'
+import { loadForAdmin } from '@/lib/auth/session'
 import { getI18n } from '@/lib/i18n/server'
 import { formatDay, formatInt, tableClass, tdClass, thClass } from '../format'
 
@@ -11,14 +11,15 @@ export const instant = false
 const FILTERS: UserFilter[] = ['all', 'admin', 'disabled']
 
 export default async function AdminUsersPage(props: PageProps<'/admin/users'>) {
-  if (!(await requireAdmin())) notFound()
   const params = await props.searchParams
   const q = typeof params.q === 'string' ? params.q.trim().slice(0, 100) : ''
   const filter = FILTERS.find((f) => f === params.filter) ?? 'all'
   const page = Math.max(1, Math.floor(Number(params.page)) || 1)
   const deletedAt = typeof params.deleted === 'string' ? params.deleted : null
 
-  const [{ rows, total }, { t }] = await Promise.all([listUsers({ q, filter, page }), getI18n()])
+  const result = await loadForAdmin(() => Promise.all([listUsers({ q, filter, page }), getI18n()]))
+  if (!result) notFound()
+  const [{ rows, total }, { t }] = result.data
   const ta = t.admin
   const tu = ta.users
   const pages = Math.max(1, Math.ceil(total / USERS_PAGE_SIZE))

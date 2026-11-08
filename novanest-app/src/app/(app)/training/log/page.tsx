@@ -1,6 +1,5 @@
 import Link from 'next/link'
-import { redirect } from 'next/navigation'
-import { getSession } from '@/lib/auth/session'
+import { loadForUser } from '@/lib/auth/session'
 import { computeCompletion, formatRate, type DayCompletion, type DayStatus } from '@/lib/training/completion'
 import {
   addDays,
@@ -30,27 +29,29 @@ import StoryShare, { type StoryCard } from './story-share'
 export const instant = false
 
 export default async function TrainingLogPage(props: PageProps<'/training/log'>) {
-  const session = await getSession()
-  if (!session) redirect('/login')
-
   const params = await props.searchParams
   const today = todayISO()
   const date = isISODate(params.date) ? params.date : today
   const savedAt = typeof params.saved === 'string' ? params.saved : null
 
-  const { plan } = await getActivePlan(session.userId)
-  const day = plan.days.find((d) => d.day === dayKeyOf(date))!
-
   const week = { from: weekStart(date), to: addDays(weekStart(date), 6) }
   const monthRange = { from: monthStart(date), to: monthEnd(date) }
-  const [logged, log, firstLogDate, weekSetCounts, gender, { locale, t }] = await Promise.all([
-    getLoggedDays(session.userId, week.from < monthRange.from ? week.from : monthRange.from, week.to > monthRange.to ? week.to : monthRange.to),
-    getWorkoutLog(session.userId, date),
-    getFirstLogDate(session.userId),
-    getSetCounts(session.userId, week.from, week.to),
-    getGender(session.userId),
-    getI18n(),
-  ])
+  // 所有查詢一次送出，並同時確認登入狀態
+  const {
+    session,
+    data: [{ plan }, logged, log, firstLogDate, weekSetCounts, gender, { locale, t }],
+  } = await loadForUser((userId) =>
+    Promise.all([
+      getActivePlan(userId),
+      getLoggedDays(userId, week.from < monthRange.from ? week.from : monthRange.from, week.to > monthRange.to ? week.to : monthRange.to),
+      getWorkoutLog(userId, date),
+      getFirstLogDate(userId),
+      getSetCounts(userId, week.from, week.to),
+      getGender(userId),
+      getI18n(),
+    ]),
+  )
+  const day = plan.days.find((d) => d.day === dayKeyOf(date))!
   const text = planText(locale, plan)
   const month = Number(date.slice(5, 7))
 

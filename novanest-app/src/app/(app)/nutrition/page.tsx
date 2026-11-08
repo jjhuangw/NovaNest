@@ -1,6 +1,5 @@
 import Link from 'next/link'
-import { redirect } from 'next/navigation'
-import { getSession } from '@/lib/auth/session'
+import { loadForUser } from '@/lib/auth/session'
 import { getI18n } from '@/lib/i18n/server'
 import type { Messages } from '@/lib/i18n/messages'
 import { dailyTotals, listEntries, type EntryView } from '@/lib/nutrition/entries'
@@ -24,21 +23,16 @@ import DeleteButton from './delete-button'
 export const instant = false
 
 export default async function NutritionPage(props: PageProps<'/nutrition'>) {
-  const session = await getSession()
-  if (!session) redirect('/login')
-
   const params = await props.searchParams
   const today = todayISO()
   const date = isISODate(params.date) ? params.date : today
   const week = { from: weekStart(date), to: addDays(weekStart(date), 6) }
 
-  const [{ plan }, entries, weekTotals, body, { locale, t }] = await Promise.all([
-    getActivePlan(session.userId),
-    listEntries(session.userId, date),
-    dailyTotals(session.userId, week.from, week.to),
-    getBodyData(session.userId),
-    getI18n(),
-  ])
+  const {
+    data: [{ plan }, entries, weekTotals, body, { locale, t }],
+  } = await loadForUser((userId) =>
+    Promise.all([getActivePlan(userId), listEntries(userId, date), dailyTotals(userId, week.from, week.to), getBodyData(userId), getI18n()]),
+  )
   const tn = t.nutrition
   const text = planText(locale, plan)
 

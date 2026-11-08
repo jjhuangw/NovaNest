@@ -12,17 +12,26 @@ export interface LoggedSet {
   reps: number
 }
 
+// 紀錄與各組同時查詢（各組以 join 篩選），只需一次資料庫往返
 export async function getWorkoutLog(userId: string, date: string) {
-  const log = await db.query.workoutLogs.findFirst({
-    where: and(eq(workoutLogs.userId, userId), eq(workoutLogs.date, date)),
-  })
+  const [log, sets] = await Promise.all([
+    db.query.workoutLogs.findFirst({
+      where: and(eq(workoutLogs.userId, userId), eq(workoutLogs.date, date)),
+    }),
+    db
+      .select({
+        exerciseIndex: setLogs.exerciseIndex,
+        exerciseName: setLogs.exerciseName,
+        setNumber: setLogs.setNumber,
+        weightKg: setLogs.weightKg,
+        reps: setLogs.reps,
+      })
+      .from(setLogs)
+      .innerJoin(workoutLogs, eq(setLogs.workoutLogId, workoutLogs.id))
+      .where(and(eq(workoutLogs.userId, userId), eq(workoutLogs.date, date)))
+      .orderBy(asc(setLogs.exerciseIndex), asc(setLogs.setNumber)),
+  ])
   if (!log) return null
-
-  const sets = await db
-    .select()
-    .from(setLogs)
-    .where(eq(setLogs.workoutLogId, log.id))
-    .orderBy(asc(setLogs.exerciseIndex), asc(setLogs.setNumber))
 
   return {
     ...log,

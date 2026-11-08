@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { getOverview } from '@/lib/admin/queries'
-import { requireAdmin } from '@/lib/auth/session'
+import { loadForAdmin } from '@/lib/auth/session'
 import { getI18n } from '@/lib/i18n/server'
 import { addDays, todayISO } from '@/lib/training/dates'
 import { formatInt, formatUsd } from './format'
@@ -9,9 +9,10 @@ import { formatInt, formatUsd } from './format'
 export const instant = false
 
 export default async function AdminOverviewPage() {
-  // layout 與 page 會平行渲染，所以每一頁都要自己檢查權限
-  if (!(await requireAdmin())) notFound()
-  const [data, { t }] = await Promise.all([getOverview(), getI18n()])
+  // layout 與 page 會平行渲染，所以每一頁都要自己檢查權限（同時讀取資料，不多等一次）
+  const result = await loadForAdmin(() => Promise.all([getOverview(), getI18n()]))
+  if (!result) notFound()
+  const [data, { t }] = result.data
   const to = t.admin.overview
 
   const today = todayISO()

@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation'
 import { SavedToast } from '@/components/form-feedback'
 import { getUserDetail } from '@/lib/admin/queries'
 import { AI_FEATURES } from '@/lib/ai/usage'
-import { requireAdmin } from '@/lib/auth/session'
+import { loadForAdmin } from '@/lib/auth/session'
 import { getI18n } from '@/lib/i18n/server'
 import { deleteUserAction, setDisabledAction, setRoleAction } from '../../actions'
 import { formatDay, formatInt, formatUsd, tableClass, tdClass, thClass } from '../../format'
@@ -12,14 +12,15 @@ import ConfirmForm from './confirm-form'
 export const instant = false
 
 export default async function AdminUserPage(props: PageProps<'/admin/users/[id]'>) {
-  const admin = await requireAdmin()
-  if (!admin) notFound()
   const { id } = await props.params
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound()
   const params = await props.searchParams
   const savedAt = typeof params.saved === 'string' ? params.saved : null
 
-  const [detail, { t }] = await Promise.all([getUserDetail(id), getI18n()])
+  const result = await loadForAdmin(() => Promise.all([getUserDetail(id), getI18n()]))
+  if (!result) notFound()
+  const admin = result.session
+  const [detail, { t }] = result.data
   if (!detail) notFound()
   const { user, ai } = detail
   const ta = t.admin

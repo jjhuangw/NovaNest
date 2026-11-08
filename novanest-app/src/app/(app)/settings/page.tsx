@@ -1,6 +1,5 @@
 import { cookies } from 'next/headers'
-import { redirect } from 'next/navigation'
-import { getSession } from '@/lib/auth/session'
+import { loadForUser } from '@/lib/auth/session'
 import { SavedToast, SubmitButton } from '@/components/form-feedback'
 import { isTheme, THEME_COOKIE } from '@/lib/i18n/config'
 import { getI18n } from '@/lib/i18n/server'
@@ -18,13 +17,13 @@ const inputClass =
 const fieldLabel = 'mb-2 block text-xs font-semibold tracking-wider'
 
 export default async function SettingsPage(props: PageProps<'/settings'>) {
-  const session = await getSession()
-  if (!session) redirect('/login')
-
   const params = await props.searchParams
   const savedAt = typeof params.saved === 'string' ? params.saved : null
   const invalid = params.error === 'body'
-  const [body, { t }, cookieStore] = await Promise.all([getBodyData(session.userId), getI18n(), cookies()])
+  const {
+    session,
+    data: [body, { t }, cookieStore],
+  } = await loadForUser((userId) => Promise.all([getBodyData(userId), getI18n(), cookies()]))
   const usernameError =
     params.error === 'username_invalid'
       ? t.auth.errors.invalid_username

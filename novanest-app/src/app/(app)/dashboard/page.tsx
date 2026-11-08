@@ -1,7 +1,7 @@
-import { getSession } from '@/lib/auth/session'
-import { redirect } from 'next/navigation'
+import { loadForUser } from '@/lib/auth/session'
 import Image from 'next/image'
 import Link from 'next/link'
+import { connection } from 'next/server'
 import { getActivePlan } from '@/lib/training/plan-store'
 import { planText } from '@/lib/training/plan-copy'
 import { getI18n } from '@/lib/i18n/server'
@@ -19,21 +19,26 @@ export const instant = false
 type Tile = { title: string; subtitle: string; image: string; alt: string; position?: string; href?: string; cta?: string }
 
 export default async function DashboardPage() {
-  const session = await getSession()
-  if (!session) redirect('/login')
-
-  const { plan } = await getActivePlan(session.userId)
-  const today = plan.days.find((d) => d.day === todayKey())!
+  // 「今天」必須依每次請求計算，不能在預先渲染時決定
+  await connection()
   const todayDate = todayISO()
   const week = { from: weekStart(todayDate), to: addDays(weekStart(todayDate), 6) }
-  const [logged, firstLogDate, photoStats, foodTotals, body, { locale, t }] = await Promise.all([
-    getLoggedDays(session.userId, week.from, week.to),
-    getFirstLogDate(session.userId),
-    countPhotos(session.userId),
-    dailyTotals(session.userId, todayDate, todayDate),
-    getBodyData(session.userId),
-    getI18n(),
-  ])
+  // 所有查詢一次送出，並同時確認登入狀態
+  const {
+    session,
+    data: [{ plan }, logged, firstLogDate, photoStats, foodTotals, body, { locale, t }],
+  } = await loadForUser((userId) =>
+    Promise.all([
+      getActivePlan(userId),
+      getLoggedDays(userId, week.from, week.to),
+      getFirstLogDate(userId),
+      countPhotos(userId),
+      dailyTotals(userId, todayDate, todayDate),
+      getBodyData(userId),
+      getI18n(),
+    ]),
+  )
+  const today = plan.days.find((d) => d.day === todayKey())!
   const text = planText(locale, plan)
   const food = foodTotals.get(todayDate)
   const foodTargets = dayTargets(plan, today.day, bodyProfileFrom(body, plan, todayDate))

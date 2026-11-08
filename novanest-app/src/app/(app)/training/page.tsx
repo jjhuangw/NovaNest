@@ -1,7 +1,6 @@
 import Link from 'next/link'
-import { redirect } from 'next/navigation'
 import { connection } from 'next/server'
-import { getSession } from '@/lib/auth/session'
+import { loadForUser } from '@/lib/auth/session'
 import { getQuestionnaire } from '@/lib/training/questionnaire-store'
 import { SavedToast } from '@/components/form-feedback'
 import { DAY_KEYS, formatDuration, isDayKey, type DietAdvice } from '@/lib/training/plan'
@@ -19,13 +18,9 @@ export default async function TrainingPage(props: PageProps<'/training'>) {
   await connection()
   const today = todayKey()
   const selected = isDayKey(day) ? day : today
-  const session = await getSession()
-  if (!session) redirect('/login')
-  const [{ locale, t }, questionnaire, active] = await Promise.all([
-    getI18n(),
-    getQuestionnaire(session.userId),
-    getActivePlan(session.userId),
-  ])
+  const {
+    data: [{ locale, t }, questionnaire, active],
+  } = await loadForUser((userId) => Promise.all([getI18n(), getQuestionnaire(userId), getActivePlan(userId)]))
   const { plan } = active
   const text = planText(locale, plan)
   const current = plan.days.find((d) => d.day === selected)!

@@ -1,6 +1,5 @@
 import Link from 'next/link'
-import { redirect } from 'next/navigation'
-import { getSession } from '@/lib/auth/session'
+import { loadForUser } from '@/lib/auth/session'
 import { getI18n } from '@/lib/i18n/server'
 import { formatDate, isoDateOf, todayISO } from '@/lib/training/dates'
 import { DAY_KEYS } from '@/lib/training/plan'
@@ -19,16 +18,10 @@ export const instant = false
 export const maxDuration = 300
 
 export default async function SetupPage(props: PageProps<'/training/setup'>) {
-  const session = await getSession()
-  if (!session) redirect('/login')
-
   const { edit, error } = await props.searchParams
-  const [saved, body, active, { t }] = await Promise.all([
-    getQuestionnaire(session.userId),
-    getBodyData(session.userId),
-    getActivePlan(session.userId),
-    getI18n(),
-  ])
+  const {
+    data: [saved, body, active, { t }],
+  } = await loadForUser((userId) => Promise.all([getQuestionnaire(userId), getBodyData(userId), getActivePlan(userId), getI18n()]))
   const ts = t.setup
   const showSummary = saved !== null && body.gender !== null && edit !== '1'
 

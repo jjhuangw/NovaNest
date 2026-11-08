@@ -1,6 +1,5 @@
 /* eslint-disable @next/next/no-img-element -- 私有照片使用短效簽章網址，不經過圖片最佳化 */
-import { redirect } from 'next/navigation'
-import { getSession } from '@/lib/auth/session'
+import { loadForUser } from '@/lib/auth/session'
 import { formatDate, isISODate, todayISO } from '@/lib/training/dates'
 import { listPhotos, type PhotoView } from '@/lib/photos/photos'
 import { isPose, POSES, type Pose } from '@/lib/photos/poses'
@@ -23,10 +22,9 @@ function formatWeight(kg: number | null) {
 }
 
 export default async function ProgressPage(props: PageProps<'/progress'>) {
-  const session = await getSession()
-  if (!session) redirect('/login')
-
-  const [params, photos, { t }] = await Promise.all([props.searchParams, listPhotos(session.userId), getI18n()])
+  const {
+    data: [params, photos, { t }],
+  } = await loadForUser((userId) => Promise.all([props.searchParams, listPhotos(userId), getI18n()]))
   const tp = t.progress
   const today = todayISO()
 
