@@ -12,6 +12,7 @@ import type { AiFeature } from './usage'
 // 每位使用者每天的次數；照片與營養標示分析共用一個額度
 export const DAILY_LIMITS = {
   plan: 3,
+  plan_translate: 5,
   food_image: 20,
   food_name: 60,
 } as const
@@ -19,12 +20,14 @@ export type LimitGroup = keyof typeof DAILY_LIMITS
 
 const GROUP_FEATURES: Record<LimitGroup, AiFeature[]> = {
   plan: ['plan'],
+  plan_translate: ['plan_translate'],
   food_image: ['food_photo', 'food_label'],
   food_name: ['food_name'],
 }
 
 export function limitGroupOf(feature: AiFeature): LimitGroup {
-  return feature === 'plan' ? 'plan' : feature === 'food_name' ? 'food_name' : 'food_image'
+  if (feature === 'food_photo' || feature === 'food_label') return 'food_image'
+  return feature
 }
 
 // 短時間內的總次數（所有 AI 功能合計），擋下連續狂按或腳本

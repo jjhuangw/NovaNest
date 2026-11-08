@@ -9,11 +9,13 @@ import { getActivePlan } from '@/lib/training/plan-store'
 import { planText } from '@/lib/training/plan-copy'
 import { getI18n } from '@/lib/i18n/server'
 import { formatDate, isoDateOf, todayKey } from '@/lib/training/dates'
+import { translatePlanAction } from './actions'
+import TranslateButton from './translate-button'
 
 export const instant = false
 
 export default async function TrainingPage(props: PageProps<'/training'>) {
-  const { day, generated } = await props.searchParams
+  const { day, generated, translate } = await props.searchParams
   // 「今天」必須依每次請求計算，不能在預先渲染時決定
   await connection()
   const today = todayKey()
@@ -22,7 +24,10 @@ export default async function TrainingPage(props: PageProps<'/training'>) {
     data: [{ locale, t }, questionnaire, active],
   } = await loadForUser((userId) => Promise.all([getI18n(), getQuestionnaire(userId), getActivePlan(userId)]))
   const { plan } = active
-  const text = planText(locale, plan)
+  const text = planText(locale, plan, active.translation)
+  // AI 課表的語言和目前語系不同、也還沒有翻譯時，提供翻譯
+  const needsTranslation = active.generated && active.locale !== null && active.locale !== locale && !active.translation
+  const translateError = typeof translate === 'string' ? (t.training.translateErrors[translate] ?? t.training.translateErrors.failed) : null
   const current = plan.days.find((d) => d.day === selected)!
   const isRest = current.exercises.length === 0
 
@@ -50,10 +55,24 @@ export default async function TrainingPage(props: PageProps<'/training'>) {
         </div>
       </section>
 
+      {(needsTranslation || active.translation) && (
+        <section className="mx-auto max-w-6xl px-6 pt-8">
+          {needsTranslation ? (
+            <form action={translatePlanAction} className="flex flex-col gap-3 border border-line p-5 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-sm">{t.training.translatePrompt}</p>
+              <TranslateButton label={t.training.translate} pendingLabel={t.training.translating} />
+            </form>
+          ) : (
+            <p className="text-xs text-muted">{t.training.translatedNote}</p>
+          )}
+          {translateError && <p className="mt-3 border-l-2 border-accent bg-stone px-3 py-2 text-sm text-accent">{translateError}</p>}
+        </section>
+      )}
+
       {typeof generated === 'string' && <SavedToast key={generated} savedAt={generated} message={t.training.generatedToast} />}
 
       {active.generated ? (
-        <PlanExtras timeline={plan.timeline} safetyNotes={plan.safetyNotes} t={t} />
+        <PlanExtras timeline={text.timeline} safetyNotes={text.safetyNotes} t={t} />
       ) : (
       <section className="mx-auto max-w-6xl px-6 pt-12">
         <div className="flex flex-col gap-4 border border-line p-6 sm:flex-row sm:items-center sm:justify-between">
@@ -122,10 +141,12 @@ export default async function TrainingPage(props: PageProps<'/training'>) {
                     <span className="w-6 shrink-0 text-sm font-semibold text-muted">{String(i + 1).padStart(2, '0')}</span>
                     <span className="flex-1 font-semibold">
                       {text.exercise(e.name)}
-                      {e.substitute && <span className="mt-1 block text-xs font-normal text-muted">{t.training.substitute(e.substitute)}</span>}
+                      {e.substitute && (
+                        <span className="mt-1 block text-xs font-normal text-muted">{t.training.substitute(text.substitute(e.name, e.substitute)!)}</span>
+                      )}
                     </span>
                     <span className="text-right text-sm tabular-nums">
-                      {t.training.volume(e.sets, e.reps, e.perSide)}
+                      {t.training.volume(e.sets, text.reps(e.name, e.reps), e.perSide)}
                       <span className="block text-xs text-muted">{t.training.restFor(formatDuration(e.restSeconds))}</span>
                     </span>
                   </li>
@@ -145,7 +166,7 @@ export default async function TrainingPage(props: PageProps<'/training'>) {
         </div>
       </section>
 
-      {plan.diet && <DietSection diet={plan.diet} t={t} />}
+      {text.diet && <DietSection diet={text.diet} t={t} />}
 
       <section className="border-t border-line">
         <div className="mx-auto max-w-6xl px-6 py-12">

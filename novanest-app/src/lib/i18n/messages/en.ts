@@ -99,6 +99,17 @@ const en: Messages = {
     comingSoon: 'Coming soon',
   },
   training: {
+    translatePrompt: 'This plan was generated in Chinese. Translate it into English with AI? The translation is saved, so switching languages shows it right away.',
+    translate: 'Translate plan',
+    translating: 'Translating, about 30 seconds…',
+    translatedNote: 'This plan was translated from the original by AI.',
+    translateErrors: {
+      unconfigured: 'AI isn’t set up yet (ANTHROPIC_API_KEY is missing), so the plan can’t be translated.',
+      failed: 'Couldn’t translate the plan. Please try again in a moment.',
+      limit_daily: 'You’ve reached today’s limit for plan translations. Try again tomorrow.',
+      limit_burst: 'Too many AI requests in a short time. Please try again in a few minutes.',
+      limit_global: 'NovaNest has reached today’s AI limit. Try again tomorrow.',
+    },
     currentWeight: 'Current weight',
     targetWeight: 'Target weight',
     frequency: 'Frequency',
@@ -584,7 +595,7 @@ const en: Messages = {
     bodyInvalid: 'Please check the height, weight and birth year ranges',
   },
   aiLimit: {
-    features: { food_image: 'photo and label analysis', food_name: 'food name estimates', plan: 'plan generation' },
+    features: { food_image: 'photo and label analysis', food_name: 'food name estimates', plan: 'plan generation', plan_translate: 'plan translations' },
     daily: (feature, limit) => `You’ve used today’s ${feature} (${limit} per day). Try again tomorrow, or enter the values yourself.`,
     burst: () => 'Too many AI requests in a short time. Please try again in a few minutes.',
     global: () => 'NovaNest has reached today’s AI limit. Try again tomorrow, or enter the values yourself.',
@@ -675,6 +686,7 @@ const en: Messages = {
       deletedUser: '(deleted user)',
       features: {
         plan: 'AI plan',
+        plan_translate: 'Plan translation',
         food_photo: 'Meal photo analysis',
         food_label: 'Nutrition label reading',
         food_name: 'Food name estimate',

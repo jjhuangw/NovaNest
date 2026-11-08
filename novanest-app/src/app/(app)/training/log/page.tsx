@@ -39,7 +39,7 @@ export default async function TrainingLogPage(props: PageProps<'/training/log'>)
   // 所有查詢一次送出，並同時確認登入狀態
   const {
     session,
-    data: [{ plan }, logged, log, firstLogDate, weekSetCounts, gender, { locale, t }],
+    data: [active, logged, log, firstLogDate, weekSetCounts, gender, { locale, t }],
   } = await loadForUser((userId) =>
     Promise.all([
       getActivePlan(userId),
@@ -51,8 +51,9 @@ export default async function TrainingLogPage(props: PageProps<'/training/log'>)
       getI18n(),
     ]),
   )
+  const { plan } = active
   const day = plan.days.find((d) => d.day === dayKeyOf(date))!
-  const text = planText(locale, plan)
+  const text = planText(locale, active.plan, active.translation)
   const month = Number(date.slice(5, 7))
 
   // 還沒有任何紀錄時，從今天開始算
@@ -205,7 +206,7 @@ export default async function TrainingLogPage(props: PageProps<'/training/log'>)
                           {text.exercise(e.name)}
                         </h3>
                         <span className="flex shrink-0 items-center gap-3">
-                          <span className="text-sm text-muted">{t.training.volume(e.sets, e.reps, e.perSide)}</span>
+                          <span className="text-sm text-muted">{t.training.volume(e.sets, text.reps(e.name, e.reps), e.perSide)}</span>
                           <RestButton label={text.exercise(e.name)} seconds={e.restSeconds} />
                         </span>
                       </div>

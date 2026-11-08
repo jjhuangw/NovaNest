@@ -97,6 +97,17 @@ const zhTW = {
     comingSoon: '即將推出',
   },
   training: {
+    translatePrompt: '這份課表是用英文產生的。要用 AI 翻成中文嗎？翻譯會保存，之後切換語言會直接顯示。',
+    translate: '翻譯課表',
+    translating: '翻譯中，約需 30 秒…',
+    translatedNote: '這份課表由 AI 從原文翻譯。',
+    translateErrors: {
+      unconfigured: 'AI 尚未設定（缺少 ANTHROPIC_API_KEY），暫時無法翻譯。',
+      failed: '翻譯失敗，請稍後再試一次。',
+      limit_daily: '今天翻譯課表的次數已用完，明天再試。',
+      limit_burst: '短時間內使用 AI 太多次了，請過幾分鐘再試。',
+      limit_global: '今天 AI 的使用量已達系統上限，請明天再試。',
+    } as Record<string, string>,
     currentWeight: '目前體重',
     targetWeight: '目標體重',
     frequency: '訓練頻率',
@@ -584,7 +595,7 @@ const zhTW = {
     bodyInvalid: '請確認身高、體重與出生年份的範圍',
   },
   aiLimit: {
-    features: { food_image: '照片與營養標示分析', food_name: '食物名稱估算', plan: '產生課表' },
+    features: { food_image: '照片與營養標示分析', food_name: '食物名稱估算', plan: '產生課表', plan_translate: '課表翻譯' },
     daily: (feature: string, limit: number) => `今天的${feature}已用完（每天 ${limit} 次），明天再試，或先自行輸入數值。`,
     // 三種訊息共用同一個呼叫方式（功能名稱、上限次數）
     burst: (() => '短時間內使用 AI 太多次了，請過幾分鐘再試。') as LimitMessage,
@@ -676,6 +687,7 @@ const zhTW = {
       deletedUser: '（已刪除的使用者）',
       features: {
         plan: 'AI 課表',
+        plan_translate: '課表翻譯',
         food_photo: '餐點照片分析',
         food_label: '營養標示辨識',
         food_name: '食物名稱估算',

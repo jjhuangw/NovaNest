@@ -29,12 +29,13 @@ export default async function NutritionPage(props: PageProps<'/nutrition'>) {
   const week = { from: weekStart(date), to: addDays(weekStart(date), 6) }
 
   const {
-    data: [{ plan }, entries, weekTotals, body, { locale, t }],
+    data: [active, entries, weekTotals, body, { locale, t }],
   } = await loadForUser((userId) =>
     Promise.all([getActivePlan(userId), listEntries(userId, date), dailyTotals(userId, week.from, week.to), getBodyData(userId), getI18n()]),
   )
   const tn = t.nutrition
-  const text = planText(locale, plan)
+  const { plan } = active
+  const text = planText(locale, plan, active.translation)
 
   const profile = bodyProfileFrom(body, plan, today)
   const dayKey = dayKeyOf(date)

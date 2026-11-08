@@ -2,7 +2,7 @@ import 'server-only'
 import { db } from '@/lib/db/client'
 import { aiUsage } from '@/lib/db/schema'
 
-export const AI_FEATURES = ['plan', 'food_photo', 'food_label', 'food_name'] as const
+export const AI_FEATURES = ['plan', 'plan_translate', 'food_photo', 'food_label', 'food_name'] as const
 export type AiFeature = (typeof AI_FEATURES)[number]
 
 export function isAiFeature(v: unknown): v is AiFeature {

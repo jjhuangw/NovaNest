@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, timestamp, numeric, pgEnum, date, integer, uniqueIndex, index, jsonb, boolean } from 'drizzle-orm/pg-core'
+import { pgTable, uuid, text, timestamp, numeric, pgEnum, date, integer, uniqueIndex, index, jsonb, boolean, primaryKey } from 'drizzle-orm/pg-core'
 
 // 所有資料表都開啟 RLS 且不設 policy：App 以 postgres 角色連線（會略過 RLS），
 // 而 Supabase 公開 API（anon key）則完全無法存取。不要移除 enableRLS()，
@@ -133,7 +133,7 @@ export const aiUsage = pgTable(
   {
     id: uuid('id').primaryKey().defaultRandom(),
     userId: uuid('user_id').references(() => users.id, { onDelete: 'set null' }),
-    // 'plan' | 'food_photo' | 'food_label' | 'food_name'，見 lib/ai/usage.ts
+    // 'plan' | 'plan_translate' | 'food_photo' | 'food_label' | 'food_name'，見 lib/ai/usage.ts
     feature: text('feature').notNull(),
     // 實際回應的模型（可能是 fallback 後的模型）
     model: text('model').notNull(),
@@ -146,6 +146,22 @@ export const aiUsage = pgTable(
     createdAt: timestamp('created_at').defaultNow().notNull(),
   },
   (t) => [index('ai_usage_created_idx').on(t.createdAt), index('ai_usage_user_idx').on(t.userId)],
+).enableRLS()
+
+// AI 課表的其他語言版本（只有顯示文字）。課表本身仍以原文計算，
+// 已記錄的動作名稱（set_logs.exercise_name）才能對得上。內容格式見 lib/training/plan-copy.ts 的 PlanText。
+export const planTranslations = pgTable(
+  'plan_translations',
+  {
+    planId: uuid('plan_id')
+      .references(() => trainingPlans.id, { onDelete: 'cascade' })
+      .notNull(),
+    locale: text('locale').notNull(),
+    text: jsonb('text').notNull(),
+    model: text('model').notNull(),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.planId, t.locale] })],
 ).enableRLS()
 
 export type User = typeof users.$inferSelect

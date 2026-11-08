@@ -19,7 +19,10 @@ export default function LanguageToggle({ className = '' }: { className?: string 
       disabled={pending}
       onClick={() =>
         startTransition(async () => {
-          await setLocaleAction(locale === 'en' ? 'zh-TW' : 'en')
+          const next = locale === 'en' ? 'zh-TW' : 'en'
+          await setLocaleAction(next)
+          // 根 layout 是預先產生的，<html lang> 只在載入時由 cookie 設定，這裡同步更新
+          document.documentElement.lang = next
           router.refresh()
         })
       }

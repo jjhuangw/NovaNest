@@ -26,7 +26,7 @@ export default async function DashboardPage() {
   // 所有查詢一次送出，並同時確認登入狀態
   const {
     session,
-    data: [{ plan }, logged, firstLogDate, photoStats, foodTotals, body, { locale, t }],
+    data: [active, logged, firstLogDate, photoStats, foodTotals, body, { locale, t }],
   } = await loadForUser((userId) =>
     Promise.all([
       getActivePlan(userId),
@@ -38,8 +38,9 @@ export default async function DashboardPage() {
       getI18n(),
     ]),
   )
+  const { plan } = active
   const today = plan.days.find((d) => d.day === todayKey())!
-  const text = planText(locale, plan)
+  const text = planText(locale, plan, active.translation)
   const food = foodTotals.get(todayDate)
   const foodTargets = dayTargets(plan, today.day, bodyProfileFrom(body, plan, todayDate))
   const nutritionTile: Tile = {

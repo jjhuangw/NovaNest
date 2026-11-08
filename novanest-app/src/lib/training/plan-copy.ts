@@ -1,9 +1,10 @@
 // 課表的顯示文字。範例課表的中文動作名稱同時是資料庫中 set_logs.exercise_name 的鍵值，
 // 所以計算一律使用課表原文，只在顯示時透過這裡換成目前語系的文字。
 import type { Locale } from '@/lib/i18n/config'
-import { mockPlan, type DayKey, type Guideline, type TrainingPlan } from './plan'
+import { mockPlan, type DayKey, type DietAdvice, type Guideline, type TrainingPlan } from './plan'
 
-interface PlanText {
+// 動作相關的對照表以課表原文的動作名稱為鍵值
+export interface PlanText {
   title: string
   goal: string
   sessionLength: string
@@ -11,6 +12,12 @@ interface PlanText {
   guidelines: Guideline[]
   weeklyTracking: string[]
   exercises: Record<string, string>
+  // 以下只有 AI 課表的翻譯才有；沒有時沿用課表原文
+  reps?: Record<string, string>
+  substitutes?: Record<string, string>
+  timeline?: string
+  safetyNotes?: string[]
+  diet?: DietAdvice
 }
 
 const en: PlanText = {
@@ -163,11 +170,17 @@ function fromPlan(plan: TrainingPlan): PlanText {
   }
 }
 
-export function planText(locale: Locale, plan: TrainingPlan = mockPlan) {
-  const text = plan !== mockPlan ? fromPlan(plan) : locale === 'en' ? en : zhTW
+// translation：AI 課表在目前語系的翻譯（沒有時顯示課表原文）
+export function planText(locale: Locale, plan: TrainingPlan = mockPlan, translation?: PlanText | null) {
+  const text = plan === mockPlan ? (locale === 'en' ? en : zhTW) : (translation ?? fromPlan(plan))
   return {
     ...text,
     day: (key: DayKey) => text.days[key],
     exercise: (name: string) => text.exercises[name] ?? name,
+    reps: (name: string, original: string) => text.reps?.[name] ?? original,
+    substitute: (name: string, original: string | undefined) => (original ? (text.substitutes?.[name] ?? original) : undefined),
+    timeline: text.timeline ?? plan.timeline,
+    safetyNotes: text.safetyNotes ?? plan.safetyNotes,
+    diet: text.diet ?? plan.diet,
   }
 }
