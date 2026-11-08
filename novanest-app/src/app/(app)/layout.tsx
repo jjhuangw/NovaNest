@@ -6,7 +6,7 @@ import LogoutButton from '@/components/auth/LogoutButton'
 import LanguageToggle from '@/components/language-toggle'
 import NavLink from '@/components/nav-link'
 import WhatsNew from '@/components/whats-new'
-import { CHANGELOG } from '@/lib/changelog'
+import { CHANGELOG, LATEST_ANNOUNCEMENT } from '@/lib/changelog'
 import { I18nProvider } from '@/lib/i18n/client'
 import { getI18n } from '@/lib/i18n/server'
 
@@ -69,7 +69,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             ))}
           </div>
         </nav>
-        <WhatsNew version={CHANGELOG[0].version} items={CHANGELOG[0].items[locale]} />
+        {LATEST_ANNOUNCEMENT && <WhatsNew version={LATEST_ANNOUNCEMENT.version} items={LATEST_ANNOUNCEMENT.items[locale]} />}
         <main>{children}</main>
         {/* 頁尾：版本與更新紀錄，關掉新功能通知後仍可以隨時查看 */}
         <footer className="border-t border-line">

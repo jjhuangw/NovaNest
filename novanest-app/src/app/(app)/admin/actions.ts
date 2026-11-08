@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { notFound, redirect } from 'next/navigation'
 import { requireAdmin } from '@/lib/auth/session'
 import { deleteUser, setUserDisabled, setUserRole } from '@/lib/admin/users'
+import { aiLimitsSchema, LIMIT_GROUPS, saveAiLimits } from '@/lib/ai/limits'
 
 const UUID = /^[0-9a-f-]{36}$/i
 
@@ -38,4 +39,31 @@ export async function deleteUserAction(formData: FormData) {
   await deleteUser(id)
   revalidatePath('/admin', 'layout')
   redirect(`/admin/users?deleted=${Date.now()}`)
+}
+
+// AI 使用上限：表單的每個欄位都要是範圍內的整數，否則整份不儲存
+export async function saveAiLimitsAction(formData: FormData) {
+  const admin = await requireAdmin()
+  if (!admin) notFound()
+  const days = String(formData.get('days') ?? '30').replace(/[^0-9]/g, '') || '30'
+  const int = (name: string) => {
+    const v = formData.get(name)
+    return typeof v === 'string' && /^\d+$/.test(v.trim()) ? Number(v) : NaN
+  }
+  const parsed = aiLimitsSchema.safeParse({
+    daily: Object.fromEntries(LIMIT_GROUPS.map((g) => [g, int(`daily.${g}`)])),
+    burst: { calls: int('burst.calls'), minutes: int('burst.minutes') },
+    globalDaily: int('globalDaily'),
+  })
+  if (!parsed.success) redirect(`/admin/ai-usage?days=${days}&limitsError=1`)
+  try {
+    await saveAiLimits(parsed.data, admin.userId)
+  } catch (e) {
+    // 還沒建立設定資料表（0004_app_settings.sql）
+    const err = e as { code?: string; cause?: { code?: string } }
+    if ((err.code ?? err.cause?.code) !== '42P01') throw e
+    redirect(`/admin/ai-usage?days=${days}&limitsError=table`)
+  }
+  revalidatePath('/admin/ai-usage')
+  redirect(`/admin/ai-usage?days=${days}&limitsSaved=${Date.now()}`)
 }

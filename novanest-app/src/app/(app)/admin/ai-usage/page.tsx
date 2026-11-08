@@ -1,7 +1,9 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { getAiUsageReport, USAGE_PERIODS, type UsageTotals } from '@/lib/admin/queries'
-import { BURST_LIMIT, DAILY_LIMITS, globalDailyLimit, globalUsageToday } from '@/lib/ai/limits'
+import { getAiLimits, globalUsageToday, LIMIT_GROUPS } from '@/lib/ai/limits'
+import { SavedToast, SubmitButton } from '@/components/form-feedback'
+import { saveAiLimitsAction } from '../actions'
 import { loadForAdmin } from '@/lib/auth/session'
 import { getI18n } from '@/lib/i18n/server'
 import { formatInt, formatUsd, tableClass, tdClass, thClass } from '../format'
@@ -12,9 +14,11 @@ export default async function AdminAiUsagePage(props: PageProps<'/admin/ai-usage
   const params = await props.searchParams
   const days = USAGE_PERIODS.find((d) => String(d) === params.days) ?? 30
 
-  const result = await loadForAdmin(() => Promise.all([getAiUsageReport(days), globalUsageToday(), getI18n()]))
+  const result = await loadForAdmin(() => Promise.all([getAiUsageReport(days), globalUsageToday(), getAiLimits(), getI18n()]))
   if (!result) notFound()
-  const [report, todayCalls, { t }] = result.data
+  const [report, todayCalls, limits, { t }] = result.data
+  const savedAt = typeof params.limitsSaved === 'string' ? params.limitsSaved : null
+  const limitsError = params.limitsError === '1' ? 'invalid' : params.limitsError === 'table' ? 'table' : null
   const tg = t.admin.usage
   const dayRows = [...report.byDay.entries()].sort(([a], [b]) => b.localeCompare(a))
   const modelRows = [...report.byModel.entries()].sort(([, a], [, b]) => b.costUsd - a.costUsd)
@@ -35,16 +39,37 @@ export default async function AdminAiUsagePage(props: PageProps<'/admin/ai-usage
         ))}
       </div>
 
+      {savedAt && <SavedToast key={savedAt} savedAt={savedAt} message={tg.limits.saved} />}
+
+      {/* 使用上限：存在 app_settings，修改後立即生效 */}
       <section className="border border-line p-5 text-sm">
         <h2 className="font-bold">{tg.limits.title}</h2>
         <p className="mt-1 text-xs text-muted">{tg.limits.hint}</p>
-        <ul className="mt-3 grid gap-x-8 gap-y-1 sm:grid-cols-2">
-          <li>{tg.limits.perUser(t.aiLimit.features.food_image, DAILY_LIMITS.food_image)}</li>
-          <li>{tg.limits.perUser(t.aiLimit.features.food_name, DAILY_LIMITS.food_name)}</li>
-          <li>{tg.limits.perUser(t.aiLimit.features.plan, DAILY_LIMITS.plan)}</li>
-          <li>{tg.limits.burst(BURST_LIMIT.calls, BURST_LIMIT.minutes)}</li>
-          <li className="font-semibold">{tg.limits.global(todayCalls, globalDailyLimit())}</li>
-        </ul>
+        <p className="mt-3 font-semibold">{tg.limits.global(todayCalls, limits.globalDaily)}</p>
+        <form action={saveAiLimitsAction} className="mt-5">
+          <input type="hidden" name="days" value={days} />
+          <fieldset>
+            <legend className="mb-2 text-xs font-semibold tracking-wider text-muted">{tg.limits.perUserTitle}</legend>
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+              {LIMIT_GROUPS.map((g) => (
+                <LimitField key={g} name={`daily.${g}`} label={t.aiLimit.features[g]} value={limits.daily[g]} max={g === 'plan' || g === 'plan_translate' ? 100 : 1000} />
+              ))}
+            </div>
+          </fieldset>
+          <fieldset className="mt-5">
+            <legend className="mb-2 text-xs font-semibold tracking-wider text-muted">{tg.limits.otherTitle}</legend>
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+              <LimitField name="burst.calls" label={tg.limits.burstCalls} value={limits.burst.calls} min={1} max={1000} />
+              <LimitField name="burst.minutes" label={tg.limits.burstMinutes} value={limits.burst.minutes} min={1} max={1440} />
+              <LimitField name="globalDaily" label={tg.limits.globalDaily} value={limits.globalDaily} min={1} max={100000} />
+            </div>
+          </fieldset>
+          <p className="mt-3 text-xs text-muted">{tg.limits.zeroHint}</p>
+          {limitsError && (
+            <p className="mt-3 border-l-2 border-accent bg-stone px-3 py-2 text-accent">{limitsError === 'table' ? tg.limits.noTable : tg.limits.invalid}</p>
+          )}
+          <SubmitButton label={tg.limits.save} />
+        </form>
       </section>
 
       <section>
@@ -169,5 +194,24 @@ function Stat({ label, value }: { label: string; value: string }) {
       <p className="text-xs font-semibold tracking-wider text-muted">{label}</p>
       <p className="mt-2 text-2xl font-bold tabular-nums">{value}</p>
     </div>
+  )
+}
+
+function LimitField({ name, label, value, min = 0, max }: { name: string; label: string; value: number; min?: number; max: number }) {
+  return (
+    <label className="block min-w-0">
+      <span className="mb-1 block text-xs">{label}</span>
+      <input
+        type="number"
+        name={name}
+        inputMode="numeric"
+        min={min}
+        max={max}
+        step={1}
+        required
+        defaultValue={value}
+        className="block min-h-11 w-full border border-line bg-surface px-3 py-2 text-sm tabular-nums focus:border-foreground focus:outline-none"
+      />
+    </label>
   )
 }

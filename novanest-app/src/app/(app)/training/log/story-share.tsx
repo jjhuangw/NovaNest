@@ -168,18 +168,34 @@ export default function StoryShare({
     return `${ts.threads.caption(options.title.trim() || card.title, card.rate, volume)}\n${link}`
   }
 
-  // 圖片＋文字：部分 App 收到圖片時會忽略文字，所以同時把文字複製起來，讓使用者可以直接貼上。
+  // 手機：和 IG 一樣只分享圖片（同時帶文字時，有些 App 只收文字、圖片會不見），
+  // 貼文文字先複製到剪貼簿，讓使用者在 Threads 直接貼上。
   // 兩個呼叫都在點擊當下送出，不等待複製完成，避免 Safari 認為分享不是使用者觸發的。
   function shareImageToThreads() {
     if (!current) return
     setMessage(null)
-    const caption = threadsCaption()
-    navigator.clipboard?.writeText(caption).catch(() => {})
-    navigator.share({ files: [current.file], text: caption }).catch((e: unknown) => {
+    navigator.clipboard?.writeText(threadsCaption()).catch(() => {})
+    navigator.share({ files: [current.file] }).catch((e: unknown) => {
       if (e instanceof DOMException && e.name === 'AbortError') return
       console.error('Sharing to Threads failed', e)
       setMessage(ts.failed(e instanceof Error ? e.name : 'Error'))
     })
+  }
+
+  // 電腦：Threads 的發文網址不能帶圖片，所以先把圖片複製到剪貼簿，再開啟已帶入文字的發文畫面讓使用者貼上。
+  // 複製與開新視窗都在點擊當下呼叫（不等待），否則瀏覽器會擋下彈出視窗或剪貼簿寫入。
+  const canCopyImage = !mobile && current !== null && typeof ClipboardItem !== 'undefined' && !!navigator.clipboard?.write
+  function copyImageAndOpenThreads() {
+    if (!current) return
+    setMessage(null)
+    navigator.clipboard
+      .write([new ClipboardItem({ 'image/png': current.file })])
+      .then(() => setMessage(ts.threads.imageCopied))
+      .catch((e: unknown) => {
+        console.error('Copying story card failed', e)
+        setMessage(ts.threads.copyFailed)
+      })
+    postTextToThreads()
   }
 
   // 文字＋連結：開啟 Threads 的發文畫面（手機會開啟 App），不含圖片
@@ -535,6 +551,11 @@ export default function StoryShare({
                   {canShareFile && (
                     <button type="button" onClick={shareImageToThreads} className="block min-h-12 w-full border border-foreground text-sm font-semibold hover:bg-foreground hover:text-background">
                       {ts.threads.shareImage}
+                    </button>
+                  )}
+                  {canCopyImage && (
+                    <button type="button" onClick={copyImageAndOpenThreads} className="block min-h-12 w-full border border-foreground text-sm font-semibold hover:bg-foreground hover:text-background">
+                      {ts.threads.copyImage}
                     </button>
                   )}
                   <button type="button" onClick={postTextToThreads} className="block min-h-12 w-full border border-line text-sm font-semibold hover:border-foreground">

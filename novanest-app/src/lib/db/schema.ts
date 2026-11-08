@@ -164,6 +164,14 @@ export const planTranslations = pgTable(
   (t) => [primaryKey({ columns: [t.planId, t.locale] })],
 ).enableRLS()
 
+// 後台可調整的設定（例如 AI 使用上限）。value 的格式由各功能自己驗證，讀不到或格式不符時使用程式內的預設值。
+export const appSettings = pgTable('app_settings', {
+  key: text('key').primaryKey(),
+  value: jsonb('value').notNull(),
+  updatedBy: uuid('updated_by').references(() => users.id, { onDelete: 'set null' }),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}).enableRLS()
+
 export type User = typeof users.$inferSelect
 export type NewUser = typeof users.$inferInsert
 export type BodyStats = typeof bodyStats.$inferSelect

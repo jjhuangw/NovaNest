@@ -1,10 +1,12 @@
 import type { Locale } from './i18n/config'
 
-// 版本紀錄：第一筆就是目前的版本。新增使用者看得到的功能時，在最前面加一筆並更新 package.json 的 version。
-// 使用者更新後第一次進入 App 時，會看到最新一筆的「新功能」通知。
+// 版本紀錄：第一筆就是目前的版本。只有重要的新功能或修正才需要新增一筆（並更新 package.json 的 version），
+// 小調整不必每次部署都記錄。announce 為 true 的版本，使用者更新後第一次進入 App 會看到「新功能」通知。
 export interface Release {
   version: string
   date: string
+  // 是否在 App 內通知使用者
+  announce: boolean
   items: Record<Locale, string[]>
 }
 
@@ -12,6 +14,7 @@ export const CHANGELOG: Release[] = [
   {
     version: '1.1.2',
     date: '2026-11-08',
+    announce: true,
     items: {
       'zh-TW': ['已記錄的飲食可以編輯：修改餐別、名稱、份量與營養素，調整份量會自動重新計算', '點頁面最下方的版本號就能查看更新紀錄'],
       en: ['Edit logged food: change the meal, name, portion and nutrients, and portion changes recalculate automatically', 'Tap the version number at the bottom of any page to see what’s new'],
@@ -20,6 +23,7 @@ export const CHANGELOG: Release[] = [
   {
     version: '1.1.1',
     date: '2026-11-08',
+    announce: false,
     items: {
       'zh-TW': ['深色模式下，訓練紀錄頁的肌肉圖線條與輪廓更清楚', '每一頁最下方都可以點「更新紀錄」查看各版本的新功能'],
       en: ['Clearer muscle outlines on the training log’s muscle map in dark mode', 'A “What’s new” link at the bottom of every page shows each version’s changes'],
@@ -28,6 +32,7 @@ export const CHANGELOG: Release[] = [
   {
     version: '1.1.0',
     date: '2026-11-08',
+    announce: true,
     items: {
       'zh-TW': [
         '課表會依你的訓練經驗安排，新手以容易感受肌肉的器材為主，每個動作都附上「感受提示」',
@@ -50,6 +55,7 @@ export const CHANGELOG: Release[] = [
   {
     version: '1.0.0',
     date: '2026-11-08',
+    announce: true,
     items: {
       'zh-TW': [
         'IG 限時動態打卡圖：可改標題、換背景、放上自己的照片、加文字和 emoji',
@@ -70,6 +76,9 @@ export const CHANGELOG: Release[] = [
 ]
 
 export const APP_VERSION = CHANGELOG[0].version
+
+// 最近一個需要通知使用者的版本
+export const LATEST_ANNOUNCEMENT = CHANGELOG.find((r) => r.announce) ?? null
 
 // 部署到 Vercel 時的 commit，方便回報問題時對照
 export function buildId(): string | null {
