@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { COOKIE_NAME, verifyToken } from '@/lib/auth/jwt'
 import { isLocale, LOCALE_COOKIE, PREFERENCE_MAX_AGE, preferredLocale } from '@/lib/i18n/config'
 
-const PUBLIC_PATHS = ['/login', '/register']
+// 首頁與 /about 是產品介紹，不需登入
+const PUBLIC_PATHS = ['/login', '/register', '/about']
 
 // 第一次造訪時依瀏覽器語言記下語系，之後頁面與 <html lang> 都以 cookie 為準
 function withLocale(req: NextRequest, res: NextResponse) {
@@ -15,6 +16,13 @@ function withLocale(req: NextRequest, res: NextResponse) {
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl
+
+  // 首頁：已登入直接進主頁，其他人看產品介紹
+  if (pathname === '/') {
+    const token = req.cookies.get(COOKIE_NAME)?.value
+    if (token && (await verifyToken(token))) return withLocale(req, NextResponse.redirect(new URL('/dashboard', req.url)))
+    return withLocale(req, NextResponse.next())
+  }
 
   if (
     PUBLIC_PATHS.includes(pathname) ||
