@@ -1,5 +1,8 @@
 import { SignJWT, jwtVerify } from 'jose'
 
+// 放在這裡而非 session.ts，讓 middleware 不必載入資料庫模組
+export const COOKIE_NAME = 'novanest_token'
+
 export interface JWTPayload {
   userId: string
   username: string

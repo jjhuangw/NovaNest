@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { verifyToken } from '@/lib/auth/jwt'
-import { COOKIE_NAME } from '@/lib/auth/session'
+import { COOKIE_NAME, verifyToken } from '@/lib/auth/jwt'
 import { isLocale, LOCALE_COOKIE, PREFERENCE_MAX_AGE, preferredLocale } from '@/lib/i18n/config'
 
 const PUBLIC_PATHS = ['/login', '/register']

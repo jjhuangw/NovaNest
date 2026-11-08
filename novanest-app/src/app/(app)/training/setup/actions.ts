@@ -83,6 +83,7 @@ async function generateFor(userId: string): Promise<string> {
 
   const thisYear = Number(todayISO().slice(0, 4))
   const result = await generatePlan(
+    userId,
     saved.answers,
     {
       gender: body.gender,

@@ -45,6 +45,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
                   </NavLink>
                 </span>
               ))}
+              {session.role === 'admin' && (
+                <NavLink href="/admin" variant="inline">
+                  {t.nav.admin}
+                </NavLink>
+              )}
               <NavLink href="/settings" variant="inline" label={t.nav.settingsLabel}>
                 <span className="hidden sm:inline">{session.username}</span>
                 <GearIcon />

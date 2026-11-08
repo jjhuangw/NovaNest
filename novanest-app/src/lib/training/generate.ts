@@ -4,6 +4,7 @@ import { betaZodOutputFormat } from '@anthropic-ai/sdk/helpers/beta/zod'
 import { z } from 'zod'
 import type { Locale } from '@/lib/i18n/config'
 import { getMessages } from '@/lib/i18n/messages'
+import { recordAiUsage } from '@/lib/ai/usage'
 import type { Gender } from '@/lib/user/body'
 import { DAY_KEYS, DIET_MEALS, MUSCLES, type TrainingPlan } from './plan'
 import { trainingPlanSchema } from './plan-schema'
@@ -102,7 +103,12 @@ export function isGeneratorConfigured() {
 
 let client: Anthropic | null = null
 
-export async function generatePlan(answers: Questionnaire, profile: PlanProfile, locale: Locale): Promise<GenerateResult> {
+export async function generatePlan(
+  userId: string,
+  answers: Questionnaire,
+  profile: PlanProfile,
+  locale: Locale,
+): Promise<GenerateResult> {
   if (!isGeneratorConfigured()) return { ok: false, reason: 'unconfigured' }
   client ??= new Anthropic()
 
@@ -128,9 +134,16 @@ export async function generatePlan(answers: Questionnaire, profile: PlanProfile,
     return { ok: false, reason: 'failed' }
   }
 
-  const raw = response.parsed_output
+  const result = toPlan(response.parsed_output, response.stop_reason)
+  await recordAiUsage({ userId, feature: 'plan', response, success: result.ok })
+  return result
+}
+
+type ParsedOutput = z.infer<typeof outputSchema>
+
+function toPlan(raw: ParsedOutput | null, stopReason: string | null): GenerateResult {
   if (!raw) {
-    console.error('Plan generation returned no parsable output', response.stop_reason)
+    console.error('Plan generation returned no parsable output', stopReason)
     return { ok: false, reason: 'failed' }
   }
 

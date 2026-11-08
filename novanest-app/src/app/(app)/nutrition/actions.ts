@@ -40,7 +40,7 @@ export async function analyzeFoodAction(formData: FormData): Promise<AnalyzeActi
   const hintRaw = formData.get('hint')
   const hint = typeof hintRaw === 'string' && hintRaw.trim() ? hintRaw.trim().slice(0, 300) : null
 
-  const result = await analyzeFoodImage({ mode, jpeg: bytes, hint, locale })
+  const result = await analyzeFoodImage({ userId: session.userId, mode, jpeg: bytes, hint, locale })
   if (!result.ok) {
     const key = result.reason === 'unrecognized' ? (`unrecognized_${mode}` as const) : result.reason
     return { ok: false, error: errors[key] }
@@ -60,7 +60,7 @@ export async function estimateFoodAction(input: { name: string; amount: string }
   if (!name) return { ok: false, error: errors.nameRequired }
   const amount = typeof input.amount === 'string' && input.amount.trim() ? input.amount.trim().slice(0, 100) : null
 
-  const result = await estimateFoodByName({ name, amount, locale })
+  const result = await estimateFoodByName({ userId: session.userId, name, amount, locale })
   if (!result.ok) return { ok: false, error: errors[result.reason === 'unrecognized' ? 'unrecognized_name' : result.reason] }
   return { ok: true, item: result.items[0] }
 }

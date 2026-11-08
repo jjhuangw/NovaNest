@@ -32,6 +32,10 @@ export async function POST(req: NextRequest) {
   if (!valid) {
     return NextResponse.json({ error: 'invalid_credentials' }, { status: 401 })
   }
+  // 密碼正確才告知已停用，避免讓人藉此探測 Email 是否註冊過
+  if (user.disabledAt) {
+    return NextResponse.json({ error: 'account_disabled' }, { status: 403 })
+  }
 
   const token = await signToken({ userId: user.id, username: user.username })
 

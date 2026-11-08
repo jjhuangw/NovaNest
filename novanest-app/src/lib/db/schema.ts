@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, timestamp, numeric, pgEnum, date, integer, uniqueIndex, index, jsonb } from 'drizzle-orm/pg-core'
+import { pgTable, uuid, text, timestamp, numeric, pgEnum, date, integer, uniqueIndex, index, jsonb, boolean } from 'drizzle-orm/pg-core'
 
 // 所有資料表都開啟 RLS 且不設 policy：App 以 postgres 角色連線（會略過 RLS），
 // 而 Supabase 公開 API（anon key）則完全無法存取。不要移除 enableRLS()，
@@ -12,6 +12,10 @@ export const users = pgTable('users', {
   gender: text('gender'),
   // 用來估算基礎代謝率；未設定時為 null
   birthYear: integer('birth_year'),
+  // 'user' | 'admin'；管理員可進入 /admin 後台，以 scripts/set-role.mjs 指定
+  role: text('role').default('user').notNull(),
+  // 停用時間；非 null 時無法登入，既有登入也會失效
+  disabledAt: timestamp('disabled_at'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 }).enableRLS()
 
@@ -120,6 +124,27 @@ export const trainingPlans = pgTable(
     createdAt: timestamp('created_at').defaultNow().notNull(),
   },
   (t) => [index('training_plans_user_created_idx').on(t.userId, t.createdAt)],
+).enableRLS()
+
+// 每次呼叫 Anthropic API 的用量，供後台估算費用。使用者刪除後保留紀錄（user_id 設為 null）。
+export const aiUsage = pgTable(
+  'ai_usage',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id').references(() => users.id, { onDelete: 'set null' }),
+    // 'plan' | 'food_photo' | 'food_label' | 'food_name'，見 lib/ai/usage.ts
+    feature: text('feature').notNull(),
+    // 實際回應的模型（可能是 fallback 後的模型）
+    model: text('model').notNull(),
+    inputTokens: integer('input_tokens').notNull(),
+    outputTokens: integer('output_tokens').notNull(),
+    cacheReadTokens: integer('cache_read_tokens').default(0).notNull(),
+    cacheWriteTokens: integer('cache_write_tokens').default(0).notNull(),
+    // 是否得到可用的結果（例如課表驗證失敗即為 false，但 token 仍會計費）
+    success: boolean('success').notNull(),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+  },
+  (t) => [index('ai_usage_created_idx').on(t.createdAt), index('ai_usage_user_idx').on(t.userId)],
 ).enableRLS()
 
 export type User = typeof users.$inferSelect
