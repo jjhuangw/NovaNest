@@ -6,10 +6,10 @@ const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? o
 
 const en: Messages = {
   meta: {
-    description: 'Build the body you want: training, nutrition and progress in one place',
+    description: 'Train into a new you. Your AI coach, workouts and meals in one place.',
   },
   nav: {
-    banner: 'Training · Nutrition · Progress, all in one place',
+    banner: 'Train into a new you · Your AI coach, workouts and meals in one place',
     plan: 'Plan',
     log: 'Log',
     nutrition: 'Food',
@@ -46,10 +46,10 @@ const en: Messages = {
   },
   auth: {
     loginTitle: 'Log in',
-    loginTagline: 'Every day, a step closer to your best self.',
+    loginTagline: 'Train into a new you.',
     loginImageAlt: 'A person meditating on a wooden floor',
     registerTitle: 'Create account',
-    registerTagline: 'Build the body you want.',
+    registerTagline: 'Start today. Train into a new you.',
     registerImageAlt: 'A woman in tree pose on a yoga mat',
     email: 'Email',
     password: 'Password',
@@ -366,6 +366,7 @@ const en: Messages = {
         setCount: (n) => plural(n, 'set'),
         more: (n) => `+ ${plural(n, 'more exercise')}`,
         done: 'WORKOUT DONE',
+        slogan: 'Train into a new you',
       },
     },
   },

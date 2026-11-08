@@ -18,6 +18,7 @@ export interface CardText {
   setCount: (n: number) => string
   more: (n: number) => string
   done: string
+  slogan: string
 }
 
 export const THEMES = ['dark', 'light', 'red', 'photo'] as const
@@ -122,7 +123,13 @@ export function drawStory(
   ctx.fill()
   ctx.fillStyle = c.fg
   ctx.font = font(900, 40)
-  spacedText(ctx, 'NOVANEST', PAD + 46, y, 8)
+  const brandEnd = spacedText(ctx, 'NOVANEST', PAD + 46, y, 8)
+  // 品牌標語放在同一行右側，空間不夠時省略
+  ctx.fillStyle = c.muted
+  ctx.font = font(600, 32)
+  ctx.textAlign = 'right'
+  if (ctx.measureText(text.slogan).width < W - PAD - brandEnd - 40) ctx.fillText(text.slogan, W - PAD, y)
+  ctx.textAlign = 'left'
 
   // 日期與標題
   y += 110
@@ -253,11 +260,13 @@ function drawCover(ctx: CanvasRenderingContext2D, img: CanvasImageSource & { wid
   ctx.drawImage(img, (W - w) / 2, (H - h) / 2, w, h)
 }
 
-function spacedText(ctx: CanvasRenderingContext2D, s: string, x: number, y: number, spacing: number) {
+// 逐字畫出加大字距的文字，回傳結束的 x 座標
+function spacedText(ctx: CanvasRenderingContext2D, s: string, x: number, y: number, spacing: number): number {
   for (const ch of s) {
     ctx.fillText(ch, x, y)
     x += ctx.measureText(ch).width + spacing
   }
+  return x
 }
 
 // 中文逐字換行、英文以單字換行；超過行數時最後一行加上省略號

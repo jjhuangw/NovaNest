@@ -3,10 +3,10 @@ type LimitMessage = (feature: string, limit: number) => string
 
 const zhTW = {
   meta: {
-    description: '打造屬於你的體態，增肌減脂健身飲食全方位管理',
+    description: '練出新的自己。AI 教練、訓練、飲食，一個地方搞定。',
   },
   nav: {
-    banner: '訓練・飲食・體態，一站式管理你的健身旅程',
+    banner: '練出新的自己・AI 教練、訓練、飲食，一個地方搞定',
     plan: '課表',
     log: '紀錄',
     nutrition: '飲食',
@@ -44,10 +44,10 @@ const zhTW = {
   },
   auth: {
     loginTitle: '登入帳號',
-    loginTagline: '每一天，都更接近理想的自己。',
+    loginTagline: '練出新的自己。',
     loginImageAlt: '在木地板上冥想的人',
     registerTitle: '建立帳號',
-    registerTagline: '打造屬於你的體態。',
+    registerTagline: '從今天開始，練出新的自己。',
     registerImageAlt: '在瑜珈墊上做樹式的女性',
     email: 'Email',
     password: '密碼',
@@ -365,6 +365,7 @@ const zhTW = {
         setCount: (n: number) => `${n} 組`,
         more: (n: number) => `還有 ${n} 個動作`,
         done: 'WORKOUT DONE',
+        slogan: '練出新的自己',
       },
     },
   },

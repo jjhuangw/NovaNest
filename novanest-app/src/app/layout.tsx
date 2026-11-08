@@ -8,8 +8,8 @@ const geist = Geist({
 })
 
 export const metadata: Metadata = {
-  title: 'NovaNest',
-  description: '打造屬於你的體態，增肌減脂健身飲食全方位管理',
+  title: 'NovaNest｜練出新的自己',
+  description: '練出新的自己。AI 教練、訓練、飲食，一個地方搞定。',
 }
 
 // 在第一次繪製前套用 cookie 中的主題與語系，避免閃爍；
