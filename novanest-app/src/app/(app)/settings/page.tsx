@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { cookies } from 'next/headers'
 import { loadForUser } from '@/lib/auth/session'
 import { SavedToast, SubmitButton } from '@/components/form-feedback'
@@ -6,6 +7,7 @@ import { getI18n } from '@/lib/i18n/server'
 import { todayISO } from '@/lib/training/dates'
 import { BODY_LIMITS, getBodyData } from '@/lib/user/profile'
 import { USERNAME_MAX } from '@/lib/user/username'
+import { APP_VERSION, buildId } from '@/lib/changelog'
 import { updateProfileAction, updateUsernameAction } from './actions'
 import { LanguageSelect, ThemeSelect, segmentClass } from './preferences'
 
@@ -149,6 +151,24 @@ export default async function SettingsPage(props: PageProps<'/settings'>) {
             <LanguageSelect />
             <ThemeSelect initial={theme} />
           </div>
+        </Section>
+
+        <Section title={ts.about} hint={ts.aboutHint}>
+          <dl className="grid grid-cols-2 gap-6 text-sm sm:max-w-md">
+            <div>
+              <dt className="text-xs text-muted">{ts.version}</dt>
+              <dd className="mt-1 text-lg font-bold tabular-nums">v{APP_VERSION}</dd>
+            </div>
+            {buildId() && (
+              <div>
+                <dt className="text-xs text-muted">{ts.build}</dt>
+                <dd className="mt-1 font-mono text-sm">{buildId()}</dd>
+              </div>
+            )}
+          </dl>
+          <Link href="/changelog" className="mt-6 inline-block text-sm font-semibold underline-offset-4 hover:underline">
+            {ts.changelog} →
+          </Link>
         </Section>
       </div>
     </div>

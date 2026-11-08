@@ -626,6 +626,11 @@ const zhTW = {
     birthYear: '出生年份',
     weighedOn: (date: string) => `最近一次體重紀錄：${date}`,
     bodyInvalid: '請確認身高、體重與出生年份的範圍',
+    about: '關於',
+    aboutHint: '目前使用的版本。回報問題時可以一併提供。',
+    version: '版本',
+    build: '建置',
+    changelog: '查看更新紀錄',
   },
   landing: {
     metaTitle: 'NovaNest｜練出新的自己',
@@ -669,6 +674,19 @@ const zhTW = {
       volume: '總訓練量',
       rows: [['深蹲', '3 組 · 60 kg × 10'], ['羅馬尼亞硬舉', '3 組 · 55 kg × 10'], ['腿推機', '3 組 · 80 kg × 12']],
     },
+  },
+  whatsNew: {
+    label: '新功能通知',
+    title: (version: string) => `NovaNest ${version} 有新功能`,
+    show: '看看有什麼',
+    hide: '收起',
+    dismiss: '知道了',
+    viewAll: '查看完整更新紀錄 →',
+  },
+  changelog: {
+    title: '更新紀錄',
+    intro: '每一版新增或改善的功能。',
+    current: '目前版本',
   },
   aiLimit: {
     features: { food_image: '照片與營養標示分析', food_name: '食物名稱估算', plan: '產生課表', plan_translate: '課表翻譯' },

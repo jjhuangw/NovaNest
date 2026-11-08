@@ -625,6 +625,11 @@ const en: Messages = {
     birthYear: 'Birth year',
     weighedOn: (date) => `Last weigh-in: ${date}`,
     bodyInvalid: 'Please check the height, weight and birth year ranges',
+    about: 'About',
+    aboutHint: 'The version you’re using. Include it when reporting a problem.',
+    version: 'Version',
+    build: 'Build',
+    changelog: 'See what’s new',
   },
   landing: {
     metaTitle: 'NovaNest | Train into a new you',
@@ -668,6 +673,19 @@ const en: Messages = {
       volume: 'Total volume',
       rows: [['Squat', '3 sets · 60 kg × 10'], ['Romanian deadlift', '3 sets · 55 kg × 10'], ['Leg press', '3 sets · 80 kg × 12']],
     },
+  },
+  whatsNew: {
+    label: 'What’s new',
+    title: (version) => `What’s new in NovaNest ${version}`,
+    show: 'Show me',
+    hide: 'Hide',
+    dismiss: 'Got it',
+    viewAll: 'See the full changelog →',
+  },
+  changelog: {
+    title: 'What’s new',
+    intro: 'New features and improvements in each version.',
+    current: 'Current',
   },
   aiLimit: {
     features: { food_image: 'photo and label analysis', food_name: 'food name estimates', plan: 'plan generation', plan_translate: 'plan translations' },

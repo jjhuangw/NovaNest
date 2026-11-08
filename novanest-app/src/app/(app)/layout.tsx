@@ -5,6 +5,8 @@ import Link from 'next/link'
 import LogoutButton from '@/components/auth/LogoutButton'
 import LanguageToggle from '@/components/language-toggle'
 import NavLink from '@/components/nav-link'
+import WhatsNew from '@/components/whats-new'
+import { CHANGELOG } from '@/lib/changelog'
 import { I18nProvider } from '@/lib/i18n/client'
 import { getI18n } from '@/lib/i18n/server'
 
@@ -67,6 +69,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             ))}
           </div>
         </nav>
+        <WhatsNew version={CHANGELOG[0].version} items={CHANGELOG[0].items[locale]} />
         <main>{children}</main>
       </div>
     </I18nProvider>
