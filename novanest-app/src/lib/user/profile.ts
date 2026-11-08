@@ -2,6 +2,7 @@ import { and, desc, eq, isNotNull } from 'drizzle-orm'
 import { db } from '@/lib/db/client'
 import { bodyPhotos, bodyStats, users } from '@/lib/db/schema'
 import { isoDateOf } from '@/lib/training/dates'
+import { usernameSchema } from './username'
 
 import { isGender, type Gender } from './body'
 
@@ -81,16 +82,22 @@ export async function saveBodyData(
   }
 }
 
-export const DISPLAY_NAME_MAX = 30
+export type UsernameChange = 'ok' | 'invalid' | 'taken'
 
-// 去掉前後空白與控制字元，連續空白合併；空字串代表改回使用 username
-export function normalizeDisplayName(value: unknown): string | null | 'invalid' {
-  if (typeof value !== 'string') return null
-  const name = value.replace(/[\p{Cc}\p{Cf}]/gu, '').replace(/\s+/g, ' ').trim()
-  if (name === '') return null
-  return [...name].length > DISPLAY_NAME_MAX ? 'invalid' : name
-}
+// 規則與註冊相同；與其他人重複時不變更
+export async function changeUsername(userId: string, value: unknown): Promise<UsernameChange> {
+  const parsed = usernameSchema.safeParse(typeof value === 'string' ? value.trim() : value)
+  if (!parsed.success) return 'invalid'
+  const username = parsed.data
 
-export async function setDisplayName(userId: string, displayName: string | null) {
-  await db.update(users).set({ displayName }).where(eq(users.id, userId))
+  const existing = await db.query.users.findFirst({ where: eq(users.username, username), columns: { id: true } })
+  if (existing) return existing.id === userId ? 'ok' : 'taken'
+  try {
+    await db.update(users).set({ username }).where(eq(users.id, userId))
+  } catch (e) {
+    // 檢查後到寫入前被別人搶先註冊，由 unique constraint 擋下
+    if ((e as { cause?: { code?: string } }).cause?.code === '23505' || (e as { code?: string }).code === '23505') return 'taken'
+    throw e
+  }
+  return 'ok'
 }

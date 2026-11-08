@@ -77,7 +77,7 @@ export default async function TrainingLogPage(props: PageProps<'/training/log'>)
             sets: sets.length,
             best: bestSet(sets),
           })),
-          name: session.displayName,
+          name: session.username,
         }
       : null
 

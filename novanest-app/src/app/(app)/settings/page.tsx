@@ -5,8 +5,9 @@ import { SavedToast, SubmitButton } from '@/components/form-feedback'
 import { isTheme, THEME_COOKIE } from '@/lib/i18n/config'
 import { getI18n } from '@/lib/i18n/server'
 import { todayISO } from '@/lib/training/dates'
-import { BODY_LIMITS, DISPLAY_NAME_MAX, getBodyData } from '@/lib/user/profile'
-import { updateDisplayNameAction, updateProfileAction } from './actions'
+import { BODY_LIMITS, getBodyData } from '@/lib/user/profile'
+import { USERNAME_MAX, USERNAME_MIN } from '@/lib/user/username'
+import { updateProfileAction, updateUsernameAction } from './actions'
 import { LanguageSelect, ThemeSelect, segmentClass } from './preferences'
 
 export const instant = false
@@ -23,7 +24,7 @@ export default async function SettingsPage(props: PageProps<'/settings'>) {
   const params = await props.searchParams
   const savedAt = typeof params.saved === 'string' ? params.saved : null
   const invalid = params.error === 'body'
-  const nameInvalid = params.error === 'name'
+  const usernameError = params.error === 'username_invalid' ? 'invalid' : params.error === 'username_taken' ? 'taken' : null
   const [body, { t }, cookieStore] = await Promise.all([getBodyData(session.userId), getI18n(), cookies()])
   const thisYear = Number(todayISO().slice(0, 4))
   const savedTheme = cookieStore.get(THEME_COOKIE)?.value
@@ -42,7 +43,7 @@ export default async function SettingsPage(props: PageProps<'/settings'>) {
         <div className="mx-auto max-w-6xl px-6 py-12">
           <p className="text-xs font-semibold uppercase tracking-[0.3em] text-muted">Settings</p>
           <h1 className="mt-3 text-3xl font-bold sm:text-5xl">{ts.title}</h1>
-          <p className="mt-4 text-base">{session.displayName}</p>
+          <p className="mt-4 text-base">{session.username}</p>
         </div>
       </section>
 
@@ -50,22 +51,28 @@ export default async function SettingsPage(props: PageProps<'/settings'>) {
 
       <div className="mx-auto max-w-6xl px-6">
         <Section title={ts.account} hint={ts.accountHint}>
-          <form action={updateDisplayNameAction}>
+          <form action={updateUsernameAction}>
             <label className="block min-w-0">
-              <span className={fieldLabel}>{ts.displayName}</span>
+              <span className={fieldLabel}>{ts.username}</span>
               <input
-                name="displayName"
+                name="username"
                 type="text"
-                maxLength={DISPLAY_NAME_MAX}
-                autoComplete="nickname"
-                defaultValue={session.displayName === session.username ? '' : session.displayName}
-                placeholder={session.username}
+                required
+                minLength={USERNAME_MIN}
+                maxLength={USERNAME_MAX}
+                pattern="[A-Za-z0-9_]+"
+                autoComplete="username"
+                autoCapitalize="none"
+                spellCheck={false}
+                defaultValue={session.username}
                 className={inputClass}
               />
             </label>
-            <p className="mt-2 text-xs text-muted">{ts.displayNameHint(session.username, DISPLAY_NAME_MAX)}</p>
-            {nameInvalid && (
-              <p className="mt-6 border-l-2 border-accent bg-stone px-3 py-2 text-sm text-accent">{ts.displayNameInvalid(DISPLAY_NAME_MAX)}</p>
+            <p className="mt-2 text-xs text-muted">{ts.usernameHint}</p>
+            {usernameError && (
+              <p className="mt-6 border-l-2 border-accent bg-stone px-3 py-2 text-sm text-accent">
+                {usernameError === 'taken' ? t.auth.errors.username_taken : t.auth.errors.invalid_username}
+              </p>
             )}
             <div className="mt-2">
               <SubmitButton label={ts.save} />

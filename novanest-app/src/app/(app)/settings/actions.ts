@@ -1,9 +1,10 @@
 'use server'
 
+import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { getSession } from '@/lib/auth/session'
 import { todayISO } from '@/lib/training/dates'
-import { BODY_LIMITS, getBodyData, isGender, normalizeDisplayName, saveBodyData, setDisplayName, setGender } from '@/lib/user/profile'
+import { BODY_LIMITS, getBodyData, isGender, changeUsername, saveBodyData, setGender } from '@/lib/user/profile'
 
 // 空白代表不填；超出範圍時整份不儲存並顯示錯誤
 function parseOptional(value: FormDataEntryValue | null, min: number, max: number, decimals: number): number | null | 'invalid' {
@@ -35,13 +36,13 @@ export async function updateProfileAction(formData: FormData) {
   redirect(`/settings?saved=${Date.now()}`)
 }
 
-// 顯示名稱留空時改回顯示使用者名稱
-export async function updateDisplayNameAction(formData: FormData) {
+export async function updateUsernameAction(formData: FormData) {
   const session = await getSession()
   if (!session) redirect('/login')
 
-  const name = normalizeDisplayName(formData.get('displayName'))
-  if (name === 'invalid') redirect('/settings?error=name')
-  await setDisplayName(session.userId, name)
+  const result = await changeUsername(session.userId, formData.get('username'))
+  if (result !== 'ok') redirect(`/settings?error=username_${result}`)
+  // 導覽列的名稱在 layout 裡，要一併重新渲染
+  revalidatePath('/', 'layout')
   redirect(`/settings?saved=${Date.now()}`)
 }

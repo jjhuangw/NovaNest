@@ -51,7 +51,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
                 </NavLink>
               )}
               <NavLink href="/settings" variant="inline" label={t.nav.settingsLabel}>
-                <span className="hidden sm:inline">{session.displayName}</span>
+                <span className="hidden sm:inline">{session.username}</span>
                 <GearIcon />
               </NavLink>
               <LanguageToggle />

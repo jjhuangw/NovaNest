@@ -43,7 +43,6 @@ export default async function AdminUserPage(props: PageProps<'/admin/users/[id]'
 
       <Section title={tu.profile} hint={tu.profileHint}>
         <dl className="grid grid-cols-1 gap-x-8 gap-y-4 text-sm sm:grid-cols-2">
-          <Field label={tu.displayName} value={user.displayName ?? ta.never} />
           <Field label={tu.email} value={user.email} />
           <Field label={tu.gender} value={gender} />
           <Field label={tu.birthYear} value={user.birthYear ? String(user.birthYear) : ta.never} />
