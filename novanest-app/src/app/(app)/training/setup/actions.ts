@@ -1,7 +1,8 @@
 'use server'
 
 import { redirect } from 'next/navigation'
-import { getSession } from '@/lib/auth/session'
+import { checkAiLimit } from '@/lib/ai/limits'
+import { getSession, type Session } from '@/lib/auth/session'
 import { getLocale } from '@/lib/i18n/server'
 import { todayISO } from '@/lib/training/dates'
 import { generatePlan, PLAN_MODEL } from '@/lib/training/generate'
@@ -66,20 +67,24 @@ export async function saveSetupAction(payload: SetupPayload): Promise<{ error: S
     return { error: 'failed' }
   }
 
-  redirect(await generateFor(session.userId))
+  redirect(await generateFor(session))
 }
 
 // 摘要頁的「產生課表／重新產生」
 export async function generatePlanAction() {
   const session = await getSession()
   if (!session) redirect('/login')
-  redirect(await generateFor(session.userId))
+  redirect(await generateFor(session))
 }
 
 // 依已存的問卷產生課表，回傳接下來要去的網址
-async function generateFor(userId: string): Promise<string> {
+async function generateFor(session: Session): Promise<string> {
+  const userId = session.userId
   const [saved, body, locale] = await Promise.all([getQuestionnaire(userId), getBodyData(userId), getLocale()])
   if (!saved || !body.gender || body.heightCm === null || body.weightKg === null) return '/training/setup?edit=1'
+
+  const limit = await checkAiLimit(session, 'plan')
+  if (!limit.ok) return `/training/setup?error=limit_${limit.reason}`
 
   const thisYear = Number(todayISO().slice(0, 4))
   const result = await generatePlan(

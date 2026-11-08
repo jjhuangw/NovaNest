@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation'
 import { z } from 'zod'
 import { getSession } from '@/lib/auth/session'
 import { getI18n } from '@/lib/i18n/server'
+import { checkAiLimit } from '@/lib/ai/limits'
 import { analyzeFoodImage, estimateFoodByName } from '@/lib/nutrition/analyze'
 import { addEntries, deleteEntry } from '@/lib/nutrition/entries'
 import { foodItemSchema, MAX_ITEMS_PER_SAVE, MEALS, SOURCES, type FoodItem } from '@/lib/nutrition/nutrients'
@@ -40,6 +41,9 @@ export async function analyzeFoodAction(formData: FormData): Promise<AnalyzeActi
   const hintRaw = formData.get('hint')
   const hint = typeof hintRaw === 'string' && hintRaw.trim() ? hintRaw.trim().slice(0, 300) : null
 
+  const limit = await checkAiLimit(session, mode === 'photo' ? 'food_photo' : 'food_label')
+  if (!limit.ok) return { ok: false, error: t.aiLimit[limit.reason](t.aiLimit.features.food_image, limit.limit) }
+
   const result = await analyzeFoodImage({ userId: session.userId, mode, jpeg: bytes, hint, locale })
   if (!result.ok) {
     const key = result.reason === 'unrecognized' ? (`unrecognized_${mode}` as const) : result.reason
@@ -59,6 +63,9 @@ export async function estimateFoodAction(input: { name: string; amount: string }
   const name = typeof input?.name === 'string' ? input.name.trim().slice(0, 100) : ''
   if (!name) return { ok: false, error: errors.nameRequired }
   const amount = typeof input.amount === 'string' && input.amount.trim() ? input.amount.trim().slice(0, 100) : null
+
+  const limit = await checkAiLimit(session, 'food_name')
+  if (!limit.ok) return { ok: false, error: t.aiLimit[limit.reason](t.aiLimit.features.food_name, limit.limit) }
 
   const result = await estimateFoodByName({ userId: session.userId, name, amount, locale })
   if (!result.ok) return { ok: false, error: errors[result.reason === 'unrecognized' ? 'unrecognized_name' : result.reason] }

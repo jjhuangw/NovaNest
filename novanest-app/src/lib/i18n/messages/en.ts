@@ -260,6 +260,9 @@ const en: Messages = {
     generateErrors: {
       unconfigured: 'The AI trainer isn’t set up yet (ANTHROPIC_API_KEY is missing). Your answers are saved, so you can build the plan once it’s set.',
       failed: 'Couldn’t build the plan. Your answers are saved. Please try again in a moment.',
+      limit_daily: 'You’ve reached today’s limit for generating plans. Your answers are saved; try again tomorrow.',
+      limit_burst: 'Too many AI requests in a short time. Your answers are saved; try again in a few minutes.',
+      limit_global: 'NovaNest has reached today’s AI limit. Your answers are saved; try again tomorrow.',
     },
     savedTitle: 'Your answers',
     savedNote: 'Your plan is built from these answers. Edit them any time and build it again.',
@@ -579,6 +582,12 @@ const en: Messages = {
     weighedOn: (date) => `Last weigh-in: ${date}`,
     bodyInvalid: 'Please check the height, weight and birth year ranges',
   },
+  aiLimit: {
+    features: { food_image: 'photo and label analysis', food_name: 'food name estimates', plan: 'plan generation' },
+    daily: (feature, limit) => `You’ve used today’s ${feature} (${limit} per day). Try again tomorrow, or enter the values yourself.`,
+    burst: () => 'Too many AI requests in a short time. Please try again in a few minutes.',
+    global: () => 'NovaNest has reached today’s AI limit. Try again tomorrow, or enter the values yourself.',
+  },
   admin: {
     title: 'Admin',
     tabs: { overview: 'Overview', users: 'Users', aiUsage: 'AI usage' },
@@ -681,6 +690,13 @@ const en: Messages = {
       feature: 'Feature',
       user: 'User',
       empty: 'No AI calls in this period',
+      limits: {
+        title: 'Usage limits',
+        hint: 'Users over a limit are asked to try again later. Admins skip the per-user limits. Set AI_DAILY_GLOBAL_LIMIT to change the site-wide limit.',
+        perUser: (feature, n) => `Per user per day, ${feature}: ${n}`,
+        burst: (n, minutes) => `Per user within ${minutes} minutes: up to ${n} (all features)`,
+        global: (used, limit) => `Site-wide today: ${used} / ${limit}`,
+      },
       costNote: 'Costs are estimated from Anthropic list prices. See your Anthropic Console billing for actual amounts.',
       unpriced: (n: number) => `${plural(n, 'call')} used a model missing from the price list and are not included in the cost.`,
     },

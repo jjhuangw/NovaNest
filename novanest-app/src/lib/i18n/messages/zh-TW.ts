@@ -1,4 +1,6 @@
 // 繁體中文字典，也是英文字典的型別來源
+type LimitMessage = (feature: string, limit: number) => string
+
 const zhTW = {
   meta: {
     description: '打造屬於你的體態，增肌減脂健身飲食全方位管理',
@@ -256,6 +258,9 @@ const zhTW = {
     generateErrors: {
       unconfigured: 'AI 教練尚未設定（缺少 ANTHROPIC_API_KEY），你的答案已儲存，設定後即可產生課表。',
       failed: '課表產生失敗，你的答案已儲存，請稍後再試一次。',
+      limit_daily: '今天產生課表的次數已用完，你的答案已儲存，明天再試一次。',
+      limit_burst: '短時間內使用 AI 太多次了，你的答案已儲存，請過幾分鐘再試。',
+      limit_global: '今天 AI 的使用量已達系統上限，你的答案已儲存，請明天再試。',
     } as Record<string, string>,
     savedTitle: '你的問卷答案',
     savedNote: '依這些答案產生課表；修改答案後可以重新產生。',
@@ -577,6 +582,13 @@ const zhTW = {
     weighedOn: (date: string) => `最近一次體重紀錄：${date}`,
     bodyInvalid: '請確認身高、體重與出生年份的範圍',
   },
+  aiLimit: {
+    features: { food_image: '照片與營養標示分析', food_name: '食物名稱估算', plan: '產生課表' },
+    daily: (feature: string, limit: number) => `今天的${feature}已用完（每天 ${limit} 次），明天再試，或先自行輸入數值。`,
+    // 三種訊息共用同一個呼叫方式（功能名稱、上限次數）
+    burst: (() => '短時間內使用 AI 太多次了，請過幾分鐘再試。') as LimitMessage,
+    global: (() => '今天 AI 的使用量已達系統上限，請明天再試，或先自行輸入數值。') as LimitMessage,
+  },
   admin: {
     title: '後台管理',
     tabs: { overview: '總覽', users: '使用者', aiUsage: 'AI 用量' },
@@ -679,6 +691,13 @@ const zhTW = {
       feature: '功能',
       user: '使用者',
       empty: '這段期間沒有 AI 呼叫紀錄',
+      limits: {
+        title: '使用上限',
+        hint: '超過上限時會請使用者稍後再試；管理員不受個人上限限制。全站上限可用環境變數 AI_DAILY_GLOBAL_LIMIT 調整。',
+        perUser: (feature: string, n: number) => `每人每天${feature}：${n} 次`,
+        burst: (n: number, minutes: number) => `每人 ${minutes} 分鐘內：最多 ${n} 次（所有功能合計）`,
+        global: (used: number, limit: number) => `全站今天：${used} / ${limit} 次`,
+      },
       costNote: '費用依 Anthropic 官方牌價估算，實際金額以 Anthropic Console 的帳單為準。',
       unpriced: (n: number) => `有 ${n} 次呼叫使用未列入價目表的模型，未計入費用。`,
     },

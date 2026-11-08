@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { getAiUsageReport, USAGE_PERIODS, type UsageTotals } from '@/lib/admin/queries'
+import { BURST_LIMIT, DAILY_LIMITS, globalDailyLimit, globalUsageToday } from '@/lib/ai/limits'
 import { requireAdmin } from '@/lib/auth/session'
 import { getI18n } from '@/lib/i18n/server'
 import { formatInt, formatUsd, tableClass, tdClass, thClass } from '../format'
@@ -12,7 +13,7 @@ export default async function AdminAiUsagePage(props: PageProps<'/admin/ai-usage
   const params = await props.searchParams
   const days = USAGE_PERIODS.find((d) => String(d) === params.days) ?? 30
 
-  const [report, { t }] = await Promise.all([getAiUsageReport(days), getI18n()])
+  const [report, todayCalls, { t }] = await Promise.all([getAiUsageReport(days), globalUsageToday(), getI18n()])
   const tg = t.admin.usage
   const dayRows = [...report.byDay.entries()].sort(([a], [b]) => b.localeCompare(a))
   const modelRows = [...report.byModel.entries()].sort(([, a], [, b]) => b.costUsd - a.costUsd)
@@ -32,6 +33,18 @@ export default async function AdminAiUsagePage(props: PageProps<'/admin/ai-usage
           </Link>
         ))}
       </div>
+
+      <section className="border border-line p-5 text-sm">
+        <h2 className="font-bold">{tg.limits.title}</h2>
+        <p className="mt-1 text-xs text-muted">{tg.limits.hint}</p>
+        <ul className="mt-3 grid gap-x-8 gap-y-1 sm:grid-cols-2">
+          <li>{tg.limits.perUser(t.aiLimit.features.food_image, DAILY_LIMITS.food_image)}</li>
+          <li>{tg.limits.perUser(t.aiLimit.features.food_name, DAILY_LIMITS.food_name)}</li>
+          <li>{tg.limits.perUser(t.aiLimit.features.plan, DAILY_LIMITS.plan)}</li>
+          <li>{tg.limits.burst(BURST_LIMIT.calls, BURST_LIMIT.minutes)}</li>
+          <li className="font-semibold">{tg.limits.global(todayCalls, globalDailyLimit())}</li>
+        </ul>
+      </section>
 
       <section>
         <div className="grid grid-cols-2 gap-px border border-line bg-line sm:grid-cols-4">
