@@ -15,6 +15,7 @@ export interface PlanText {
   // 以下只有 AI 課表的翻譯才有；沒有時沿用課表原文
   reps?: Record<string, string>
   substitutes?: Record<string, string>
+  cues?: Record<string, string>
   timeline?: string
   safetyNotes?: string[]
   diet?: DietAdvice
@@ -179,6 +180,7 @@ export function planText(locale: Locale, plan: TrainingPlan = mockPlan, translat
     exercise: (name: string) => text.exercises[name] ?? name,
     reps: (name: string, original: string) => text.reps?.[name] ?? original,
     substitute: (name: string, original: string | undefined) => (original ? (text.substitutes?.[name] ?? original) : undefined),
+    cue: (name: string, original: string | undefined) => (original ? (text.cues?.[name] ?? original) : undefined),
     timeline: text.timeline ?? plan.timeline,
     safetyNotes: text.safetyNotes ?? plan.safetyNotes,
     diet: text.diet ?? plan.diet,

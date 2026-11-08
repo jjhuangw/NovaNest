@@ -29,7 +29,7 @@ const textSchema = z.object({
     z.object({
       title: z.string(),
       notes: z.array(z.string()),
-      exercises: z.array(z.object({ name: z.string(), reps: z.string(), substitute: z.string() })),
+      exercises: z.array(z.object({ name: z.string(), reps: z.string(), substitute: z.string(), cue: z.string() })),
     }),
   ),
   guidelines: z.array(z.object({ title: z.string(), items: z.array(z.string()) })),
@@ -51,6 +51,7 @@ const storedSchema = z.object({
   exercises: z.record(z.string(), z.string()),
   reps: z.record(z.string(), z.string()).optional(),
   substitutes: z.record(z.string(), z.string()).optional(),
+  cues: z.record(z.string(), z.string()).optional(),
   timeline: z.string().optional(),
   safetyNotes: z.array(z.string()).optional(),
   diet: dietSchema.optional(),
@@ -69,7 +70,7 @@ function toPayload(plan: TrainingPlan): TextPayload {
     days: plan.days.map((d) => ({
       title: d.title,
       notes: d.notes,
-      exercises: d.exercises.map((e) => ({ name: e.name, reps: e.reps, substitute: e.substitute ?? '' })),
+      exercises: d.exercises.map((e) => ({ name: e.name, reps: e.reps, substitute: e.substitute ?? '', cue: e.cue ?? '' })),
     })),
     guidelines: plan.guidelines,
     weeklyTracking: plan.weeklyTracking,
@@ -88,6 +89,7 @@ function fromPayload(plan: TrainingPlan, out: TextPayload): PlanText | null {
   const exercises: Record<string, string> = {}
   const reps: Record<string, string> = {}
   const substitutes: Record<string, string> = {}
+  const cues: Record<string, string> = {}
   const days = {} as PlanText['days']
   for (const [i, day] of plan.days.entries()) {
     const t = out.days[i]
@@ -98,6 +100,7 @@ function fromPayload(plan: TrainingPlan, out: TextPayload): PlanText | null {
       exercises[e.name] = te.name.trim() || e.name
       reps[e.name] = te.reps.trim() || e.reps
       if (e.substitute && te.substitute.trim()) substitutes[e.name] = te.substitute
+      if (e.cue && te.cue.trim()) cues[e.name] = te.cue
     })
   }
   for (const [i, g] of plan.guidelines.entries()) if (!sameLength(out.guidelines[i].items, g.items)) return null
@@ -113,6 +116,7 @@ function fromPayload(plan: TrainingPlan, out: TextPayload): PlanText | null {
     exercises,
     reps,
     substitutes,
+    cues,
     ...(plan.timeline && out.timeline.trim() ? { timeline: out.timeline } : {}),
     ...(plan.safetyNotes && sameLength(out.safetyNotes, plan.safetyNotes) ? { safetyNotes: out.safetyNotes } : {}),
     ...(diet ? { diet } : {}),

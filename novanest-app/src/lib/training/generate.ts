@@ -36,6 +36,7 @@ const outputSchema = z.object({
           restSeconds: z.number(),
           muscles: z.array(z.object({ muscle: z.enum(MUSCLES), weight: z.number() })),
           substitute: z.string(),
+          cue: z.string(),
         }),
       ),
     }),
@@ -84,6 +85,8 @@ export function describeTrainee(answers: Questionnaire, profile: PlanProfile, lo
     `- 目前體態：${currentCopy ? `體脂${currentCopy.label}（${currentCopy.desc}）` : '未選擇'}`,
     `- 理想體態：${targetCopy ? `${targetCopy.label}（體脂${targetCopy.desc}）` : '未選擇'}`,
     `- 重量訓練經驗：${ts.experiences[answers.experience].label}（${ts.experiences[answers.experience].desc}）`,
+    `- 訓練時能不能感覺到目標肌肉出力：${ts.muscleFeel[answers.muscleFeel].label}（${ts.muscleFeel[answers.muscleFeel].desc}）`,
+    `- 姿勢有把握的動作：${answers.knownLifts.length ? join(answers.knownLifts.map((l) => ts.knownLifts[l])) : '都沒有把握'}`,
     `- 每週可訓練總時數：${ts.hours(answers.weeklyHours)}；可訓練的日子：${
       answers.days.length ? join(answers.days.map((d) => days[d])) : '都可以，由教練安排'
     }；時段：${ts.times[answers.timeOfDay]}`,
@@ -159,12 +162,13 @@ function toPlan(raw: ParsedOutput | null, stopReason: string | null): GenerateRe
     days: raw.days.map((d) => ({
       ...d,
       notes: clean(d.notes, 8),
-      exercises: d.exercises.slice(0, 12).map(({ muscles, substitute, perSide, ...e }) => ({
+      exercises: d.exercises.slice(0, 12).map(({ muscles, substitute, cue, perSide, ...e }) => ({
         ...e,
         sets: Math.round(e.sets),
         restSeconds: Math.round(e.restSeconds),
         ...(perSide ? { perSide: true } : {}),
         ...(substitute.trim() ? { substitute } : {}),
+        ...(cue.trim() ? { cue: cue.trim().slice(0, 160) } : {}),
         muscles: Object.fromEntries(muscles.map((m) => [m.muscle, m.weight >= 0.75 ? 1 : 0.5])),
       })),
     })),

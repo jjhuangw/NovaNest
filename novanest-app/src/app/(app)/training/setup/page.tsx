@@ -80,6 +80,10 @@ function Summary({
   const rows: [string, string][] = [
     [ts.summary.goal, ts.goals[answers.goal].label],
     [ts.summary.experience, ts.experiences[answers.experience].label],
+    [
+      ts.summary.technique,
+      `${ts.muscleFeel[answers.muscleFeel].label}・${answers.knownLifts.length ? join(answers.knownLifts.map((l) => ts.knownLifts[l])) : ts.none}`,
+    ],
     [ts.summary.schedule, ts.scheduleSummary(ts.hours(answers.weeklyHours), days, ts.times[answers.timeOfDay])],
     [ts.summary.venue, venue + equipment],
     [ts.summary.injuries, join(injuries)],

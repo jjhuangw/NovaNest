@@ -17,6 +17,8 @@ export interface Exercise {
   muscles: Partial<Record<Muscle, number>>
   // 器材被占用或做起來不舒服時的替代動作（AI 課表才有）
   substitute?: string
+  // 感受提示：怎麼做才能感覺到目標肌肉出力（AI 課表才有）
+  cue?: string
 }
 
 export interface TrainingDay {

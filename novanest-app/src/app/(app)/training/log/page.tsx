@@ -213,6 +213,7 @@ export default async function TrainingLogPage(props: PageProps<'/training/log'>)
                           <RestButton label={text.exercise(e.name)} seconds={e.restSeconds} />
                         </span>
                       </div>
+                      {e.cue && <p className="mt-2 text-xs text-muted">{t.training.cue(text.cue(e.name, e.cue)!)}</p>}
                       <div className="mt-2 grid grid-cols-[3.5rem_1fr_1fr] items-center gap-x-3 gap-y-2 text-sm">
                         <span />
                         <span className="text-xs text-muted">{t.log.weight}</span>

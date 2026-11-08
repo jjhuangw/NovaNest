@@ -6,6 +6,10 @@ import type { Gender } from '@/lib/user/profile'
 
 export const GOALS = ['muscle_gain', 'fat_loss', 'recomp', 'fitness', 'health'] as const
 export const EXPERIENCES = ['beginner', 'intermediate', 'advanced'] as const
+// 訓練時能不能感覺到目標肌肉出力（新手常只覺得手臂或關節累）
+export const MUSCLE_FEEL = ['clear', 'sometimes', 'rarely'] as const
+// 姿勢有把握的主要動作；沒把握的由教練換成較容易學的版本
+export const KNOWN_LIFTS = ['squat', 'deadlift', 'bench', 'overhead_press', 'row', 'pulldown'] as const
 export const WEEKLY_HOURS = [2, 3, 4, 5, 6, 8, 10] as const
 export const TIMES_OF_DAY = ['morning', 'daytime', 'evening', 'varies'] as const
 export const VENUES = ['gym', 'small_gym', 'home', 'bodyweight', 'outdoor'] as const
@@ -77,6 +81,9 @@ export const questionnaireSchema = z.object({
   currentShape: z.string().max(20).nullable(),
   targetShape: z.string().max(20).nullable(),
   experience: z.enum(EXPERIENCES),
+  // 後來新增的題目：舊的答案沒有這兩項時給預設值
+  muscleFeel: z.enum(MUSCLE_FEEL).default('sometimes'),
+  knownLifts: z.array(z.enum(KNOWN_LIFTS)).default([]),
   weeklyHours: z.number().int().min(1).max(15),
   // 空陣列代表哪天都可以，由教練安排
   days: z.array(z.enum(DAY_KEYS)).max(7),
@@ -99,6 +106,8 @@ export const DEFAULT_ANSWERS: Questionnaire = {
   currentShape: null,
   targetShape: null,
   experience: 'beginner',
+  muscleFeel: 'sometimes',
+  knownLifts: [],
   weeklyHours: 4,
   days: [],
   timeOfDay: 'evening',

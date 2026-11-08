@@ -141,6 +141,7 @@ export default async function TrainingPage(props: PageProps<'/training'>) {
                     <span className="w-6 shrink-0 text-sm font-semibold text-muted">{String(i + 1).padStart(2, '0')}</span>
                     <span className="flex-1 font-semibold">
                       {text.exercise(e.name)}
+                      {e.cue && <span className="mt-1 block text-xs font-normal text-foreground/80">{t.training.cue(text.cue(e.name, e.cue)!)}</span>}
                       {e.substitute && (
                         <span className="mt-1 block text-xs font-normal text-muted">{t.training.substitute(text.substitute(e.name, e.substitute)!)}</span>
                       )}

@@ -9,6 +9,8 @@ import {
   DIETS,
   EATING_OUT,
   EXPERIENCES,
+  KNOWN_LIFTS,
+  MUSCLE_FEEL,
   GOALS,
   HOME_EQUIPMENT,
   INJURIES,
@@ -23,7 +25,7 @@ import { BODY_LIMITS, type Gender } from '@/lib/user/body'
 import { saveSetupAction, type SetupError } from './actions'
 import { BodyShapeFigure } from './body-shape'
 
-const STEPS = ['profile', 'goal', 'current', 'target', 'experience', 'schedule', 'venue', 'injuries', 'diet'] as const
+const STEPS = ['profile', 'goal', 'current', 'target', 'experience', 'technique', 'schedule', 'venue', 'injuries', 'diet'] as const
 type Step = (typeof STEPS)[number]
 // 單選題選完自動進到下一步，減少點擊
 const AUTO_ADVANCE: readonly Step[] = ['goal', 'current', 'target', 'experience']
@@ -212,6 +214,34 @@ export function SetupWizard({
                 <span className="mt-1 text-sm text-muted">{ts.experiences[e].desc}</span>
               </button>
             ))}
+          </div>
+        )}
+
+        {step === 'technique' && (
+          <div className="space-y-8">
+            <ChipGroup label={ts.muscleFeelTitle}>
+              <div className="grid w-full gap-3">
+                {MUSCLE_FEEL.map((f) => (
+                  <button key={f} type="button" aria-pressed={answers.muscleFeel === f} onClick={() => set('muscleFeel', f)} className={cardClass(answers.muscleFeel === f)}>
+                    <span className="font-bold">{ts.muscleFeel[f].label}</span>
+                    <span className="mt-1 text-sm text-muted">{ts.muscleFeel[f].desc}</span>
+                  </button>
+                ))}
+              </div>
+            </ChipGroup>
+            <ChipGroup label={ts.knownLiftsTitle} hint={ts.knownLiftsHint}>
+              {KNOWN_LIFTS.map((l) => (
+                <button
+                  key={l}
+                  type="button"
+                  aria-pressed={answers.knownLifts.includes(l)}
+                  onClick={() => set('knownLifts', KNOWN_LIFTS.filter((k) => toggle(answers.knownLifts, l).includes(k)))}
+                  className={chipClass(answers.knownLifts.includes(l))}
+                >
+                  {ts.knownLifts[l]}
+                </button>
+              ))}
+            </ChipGroup>
           </div>
         )}
 

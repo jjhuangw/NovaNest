@@ -13,6 +13,7 @@ const exerciseSchema = z.object({
   restSeconds: z.number().int().min(15).max(600),
   muscles: z.partialRecord(z.enum(MUSCLES), z.number().min(0).max(1)),
   substitute: text(120).optional(),
+  cue: text(160).optional(),
 })
 
 const daySchema = z.object({
