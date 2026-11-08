@@ -583,6 +583,11 @@ const en: Messages = {
     saved: (n) => `Added ${plural(n, 'item')}`,
     empty: 'Nothing logged for this day yet.',
     deleteLabel: (name) => `Delete ${name}`,
+    edit: 'Edit',
+    editLabel: (name) => `Edit ${name}`,
+    editTitle: (name) => `Edit “${name}”`,
+    saveEdit: 'Save changes',
+    cancelEdit: 'Cancel',
     confirmDelete: (name) => `Delete "${name}"?`,
     sources: { manual: 'Manual', photo: 'Photo', label: 'Label' },
     errors: {

@@ -96,3 +96,25 @@ export async function addEntries(input: { userId: string; date: string; meal: Me
 export async function deleteEntry(userId: string, id: string) {
   await db.delete(foodEntries).where(and(eq(foodEntries.id, id), eq(foodEntries.userId, userId)))
 }
+
+// 修改一筆紀錄（只能改自己的）；找不到時回傳 false
+export async function updateEntry(userId: string, id: string, input: { meal: Meal; item: FoodItem }) {
+  const { item } = input
+  const rows = await db
+    .update(foodEntries)
+    .set({
+      meal: input.meal,
+      name: item.name,
+      amount: item.amount,
+      kcal: String(item.kcal),
+      proteinG: String(item.proteinG),
+      carbsG: String(item.carbsG),
+      fatG: String(item.fatG),
+      fiberG: str(item.fiberG),
+      sugarG: str(item.sugarG),
+      sodiumMg: str(item.sodiumMg),
+    })
+    .where(and(eq(foodEntries.id, id), eq(foodEntries.userId, userId)))
+    .returning({ id: foodEntries.id })
+  return rows.length > 0
+}

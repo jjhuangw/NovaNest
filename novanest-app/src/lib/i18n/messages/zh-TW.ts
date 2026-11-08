@@ -584,6 +584,11 @@ const zhTW = {
     saved: (n: number) => `已新增 ${n} 項食物`,
     empty: '這天還沒有飲食紀錄。',
     deleteLabel: (name: string) => `刪除 ${name}`,
+    edit: '編輯',
+    editLabel: (name: string) => `編輯 ${name}`,
+    editTitle: (name: string) => `編輯「${name}」`,
+    saveEdit: '儲存修改',
+    cancelEdit: '取消',
     confirmDelete: (name: string) => `確定要刪除「${name}」嗎？`,
     sources: { manual: '手動', photo: '照片', label: '營養標示' },
     errors: {

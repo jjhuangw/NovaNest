@@ -10,6 +10,14 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.2',
+    date: '2026-11-08',
+    items: {
+      'zh-TW': ['已記錄的飲食可以編輯：修改餐別、名稱、份量與營養素，調整份量會自動重新計算', '點頁面最下方的版本號就能查看更新紀錄'],
+      en: ['Edit logged food: change the meal, name, portion and nutrients, and portion changes recalculate automatically', 'Tap the version number at the bottom of any page to see what’s new'],
+    },
+  },
+  {
     version: '1.1.1',
     date: '2026-11-08',
     items: {

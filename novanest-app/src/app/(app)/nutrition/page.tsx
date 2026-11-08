@@ -3,7 +3,7 @@ import { connection } from 'next/server'
 import { loadForUser } from '@/lib/auth/session'
 import { getI18n } from '@/lib/i18n/server'
 import type { Messages } from '@/lib/i18n/messages'
-import { dailyTotals, listEntries, type EntryView } from '@/lib/nutrition/entries'
+import { dailyTotals, listEntries } from '@/lib/nutrition/entries'
 import { formatAmount, mealForHour, MEALS, sumNutrients, UNITS, type Nutrients } from '@/lib/nutrition/nutrients'
 import {
   ACTIVITY_FACTOR,
@@ -19,7 +19,7 @@ import { getActivePlan } from '@/lib/training/plan-store'
 import { planText } from '@/lib/training/plan-copy'
 import { getBodyData } from '@/lib/user/profile'
 import AddFoodForm from './add-food-form'
-import DeleteButton from './delete-button'
+import EntryItem from './entry-item'
 
 export const instant = false
 
@@ -179,7 +179,7 @@ export default async function NutritionPage(props: PageProps<'/nutrition'>) {
                           </div>
                           <ul className="divide-y divide-line">
                             {list.map((e) => (
-                              <EntryRow key={e.id} entry={e} t={t} />
+                              <EntryItem key={e.id} entry={e} />
                             ))}
                           </ul>
                         </div>
@@ -313,31 +313,6 @@ function WeekCell({
           {body}
         </Link>
       )}
-    </li>
-  )
-}
-
-function EntryRow({ entry: e, t }: { entry: EntryView; t: Messages }) {
-  const tn = t.nutrition
-  return (
-    <li className="flex items-start justify-between gap-4 py-3">
-      <div className="min-w-0">
-        <p className="font-semibold">
-          {e.name}
-          {e.source !== 'manual' && (
-            <span className="ml-2 align-middle text-[10px] font-semibold uppercase tracking-wider text-muted">{tn.sources[e.source]}</span>
-          )}
-        </p>
-        {e.amount && <p className="text-xs text-muted">{e.amount}</p>}
-        <p className="mt-1 text-xs tabular-nums text-muted">
-          {tn.nutrientsShort.proteinG} {formatAmount(e.proteinG, 'proteinG')} g・{tn.nutrientsShort.carbsG}{' '}
-          {formatAmount(e.carbsG, 'carbsG')} g・{tn.nutrientsShort.fatG} {formatAmount(e.fatG, 'fatG')} g
-        </p>
-      </div>
-      <div className="flex shrink-0 flex-col items-end gap-1">
-        <span className="text-sm font-bold tabular-nums">{formatAmount(e.kcal, 'kcal')} kcal</span>
-        <DeleteButton id={e.id} name={e.name} />
-      </div>
     </li>
   )
 }

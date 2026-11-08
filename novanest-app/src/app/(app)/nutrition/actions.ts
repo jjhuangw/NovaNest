@@ -7,7 +7,7 @@ import { getSession } from '@/lib/auth/session'
 import { getI18n } from '@/lib/i18n/server'
 import { checkAiLimit } from '@/lib/ai/limits'
 import { analyzeFoodImage, estimateFoodByName } from '@/lib/nutrition/analyze'
-import { addEntries, deleteEntry } from '@/lib/nutrition/entries'
+import { addEntries, deleteEntry, updateEntry } from '@/lib/nutrition/entries'
 import { foodItemSchema, MAX_ITEMS_PER_SAVE, MEALS, SOURCES, type FoodItem } from '@/lib/nutrition/nutrients'
 import { jpegSize } from '@/lib/photos/jpeg'
 import { MAX_EDGE, MAX_UPLOAD_BYTES, MIN_EDGE } from '@/lib/photos/limits'
@@ -109,4 +109,29 @@ export async function deleteFoodAction(formData: FormData) {
     await deleteEntry(session.userId, id)
   }
   revalidatePath('/nutrition')
+}
+
+const updateSchema = z.object({
+  id: z.uuid(),
+  meal: z.enum(MEALS),
+  item: foodItemSchema,
+})
+
+export async function updateFoodAction(input: z.input<typeof updateSchema>): Promise<SaveActionResult> {
+  const session = await getSession()
+  if (!session) redirect('/login')
+  const { t } = await getI18n()
+
+  const parsed = updateSchema.safeParse(input)
+  if (!parsed.success) return { ok: false, error: t.nutrition.errors.invalid }
+
+  try {
+    const found = await updateEntry(session.userId, parsed.data.id, { meal: parsed.data.meal, item: parsed.data.item })
+    if (!found) return { ok: false, error: t.nutrition.errors.saveFailed }
+  } catch (e) {
+    console.error('Updating food entry failed', e)
+    return { ok: false, error: t.nutrition.errors.saveFailed }
+  }
+  revalidatePath('/nutrition')
+  return { ok: true }
 }
