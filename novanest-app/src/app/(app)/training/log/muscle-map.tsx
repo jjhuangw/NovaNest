@@ -3,8 +3,7 @@ import { formatSets, type MuscleStatus, type MuscleVolume } from '@/lib/training
 import { MUSCLES } from '@/lib/training/plan'
 import type { Messages } from '@/lib/i18n/messages'
 import type { Gender } from '@/lib/user/profile'
-import type { MuscleFill } from './body-figures'
-import BodyViewer from './body-viewer'
+import BodyFigures, { type MuscleFill } from './body-figures'
 
 // 狀態色一定搭配圖示與文字，不單靠顏色。「尚未排到」的灰色依主題調整（CSS 變數）
 const STATUS: Record<MuscleStatus, { color: string; icon: string }> = {
@@ -44,7 +43,7 @@ export default function MuscleMap({
       <p className="mt-1 text-xs text-muted">{m.intro(weekLabel)}</p>
 
       <p className="sr-only">{m.summary(summary)}</p>
-      <BodyViewer gender={gender} fills={fills} />
+      <BodyFigures gender={gender} fills={fills} />
 
       <ul className="mt-6 flex flex-wrap gap-x-4 gap-y-2 text-xs text-muted">
         {(Object.keys(STATUS) as MuscleStatus[]).map((s) => (

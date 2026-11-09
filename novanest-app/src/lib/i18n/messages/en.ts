@@ -411,11 +411,6 @@ const en: Messages = {
     },
   },
   muscleMap: {
-    model3dLabel: 'Rotatable 3D muscle map; colours show this week’s training status for each muscle group',
-    rotateLabel: 'Rotate',
-    rotateLeft: 'Rotate left',
-    rotateRight: 'Rotate right',
-    tapHint3d: 'Drag sideways to rotate; tap a muscle to see its numbers',
     heading: 'Muscle group volume',
     intro: (week) => `${week} · Sets done ÷ sets planned this week; colors show whether you're on pace as of today`,
     status: { good: 'On track', warning: 'Close', critical: 'Behind', upcoming: 'Not yet' },

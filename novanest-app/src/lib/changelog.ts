@@ -16,14 +16,8 @@ export const CHANGELOG: Release[] = [
     date: '2026-11-09',
     announce: true,
     items: {
-      'zh-TW': [
-        '新增「訓練趨勢」：每週總訓練量、每週達成率，以及每個動作的最佳一組與推估最大肌力（1RM）',
-        '訓練紀錄頁的肌群訓練量改為 3D 人形，可以左右拖曳旋轉、點選肌肉查看數字',
-      ],
-      en: [
-        'New Training trends: weekly volume, weekly completion, and best set and estimated max (1RM) for each exercise',
-        'The muscle map on the training log is now a 3D figure you can drag to rotate and tap to see each muscle’s numbers',
-      ],
+      'zh-TW': ['新增「訓練趨勢」：每週總訓練量、每週達成率，以及每個動作的最佳一組與推估最大肌力（1RM）'],
+      en: ['New Training trends: weekly volume, weekly completion, and best set and estimated max (1RM) for each exercise'],
     },
   },
   {

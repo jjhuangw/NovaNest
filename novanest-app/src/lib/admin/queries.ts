@@ -1,11 +1,17 @@
 import 'server-only'
-import { and, count, desc, eq, gte, ilike, isNotNull, or, sql, type AnyColumn, type SQL } from 'drizzle-orm'
+import { and, count, desc, eq, getTableName, gte, ilike, isNotNull, or, sql, type AnyColumn, type SQL } from 'drizzle-orm'
+import type { PgColumn } from 'drizzle-orm/pg-core'
 import { db } from '@/lib/db/client'
 import { aiUsage, bodyPhotos, foodEntries, trainingPlans, users, workoutLogs } from '@/lib/db/schema'
 import { estimateCostUsd, type TokenCounts } from '@/lib/ai/pricing'
 import { TIME_ZONE } from '@/lib/training/dates'
 
 // 資料庫的 timestamp 不含時區，以 UTC 儲存；依台灣時間分日
+// 子查詢裡的欄位要寫成「資料表.欄位」：Drizzle 在只查一張表時不會加上資料表名稱，
+// 於是子查詢裡的 "id" 會被當成子查詢那張表的欄位（例如 workout_logs.id），條件永遠對不上。
+const qualified = (column: PgColumn) => sql`${sql.identifier(getTableName(column.table))}.${sql.identifier(column.name)}`
+const userId = qualified(users.id)
+
 const taipeiDay = (col: AnyColumn) =>
   sql<string>`to_char((${col} at time zone 'UTC') at time zone ${TIME_ZONE}, 'YYYY-MM-DD')`
 
@@ -111,9 +117,9 @@ export async function getOverview() {
 export const USERS_PAGE_SIZE = 50
 
 const lastActiveAt = sql`greatest(
-  (select max(${workoutLogs.updatedAt}) from ${workoutLogs} where ${workoutLogs.userId} = ${users.id}),
-  (select max(${foodEntries.createdAt}) from ${foodEntries} where ${foodEntries.userId} = ${users.id}),
-  (select max(${bodyPhotos.createdAt}) from ${bodyPhotos} where ${bodyPhotos.userId} = ${users.id})
+  (select max(${qualified(workoutLogs.updatedAt)}) from ${workoutLogs} where ${qualified(workoutLogs.userId)} = ${userId}),
+  (select max(${qualified(foodEntries.createdAt)}) from ${foodEntries} where ${qualified(foodEntries.userId)} = ${userId}),
+  (select max(${qualified(bodyPhotos.createdAt)}) from ${bodyPhotos} where ${qualified(bodyPhotos.userId)} = ${userId})
 )`.mapWith(users.createdAt)
 
 export type UserFilter = 'all' | 'admin' | 'disabled'
@@ -138,9 +144,9 @@ export async function listUsers({ q, filter, page }: { q: string; filter: UserFi
         disabledAt: users.disabledAt,
         createdAt: users.createdAt,
         lastActiveAt,
-        workouts: sql<number>`(select count(*)::int from ${workoutLogs} where ${workoutLogs.userId} = ${users.id})`,
-        foods: sql<number>`(select count(*)::int from ${foodEntries} where ${foodEntries.userId} = ${users.id})`,
-        aiCalls: sql<number>`(select count(*)::int from ${aiUsage} where ${aiUsage.userId} = ${users.id})`,
+        workouts: sql<number>`(select count(*)::int from ${workoutLogs} where ${qualified(workoutLogs.userId)} = ${userId})`,
+        foods: sql<number>`(select count(*)::int from ${foodEntries} where ${qualified(foodEntries.userId)} = ${userId})`,
+        aiCalls: sql<number>`(select count(*)::int from ${aiUsage} where ${qualified(aiUsage.userId)} = ${userId})`,
       })
       .from(users)
       .where(where)
@@ -166,10 +172,10 @@ export async function getUserDetail(userId: string) {
       disabledAt: users.disabledAt,
       createdAt: users.createdAt,
       lastActiveAt,
-      workouts: sql<number>`(select count(*)::int from ${workoutLogs} where ${workoutLogs.userId} = ${users.id})`,
-      foods: sql<number>`(select count(*)::int from ${foodEntries} where ${foodEntries.userId} = ${users.id})`,
-      photos: sql<number>`(select count(*)::int from ${bodyPhotos} where ${bodyPhotos.userId} = ${users.id})`,
-      plans: sql<number>`(select count(*)::int from ${trainingPlans} where ${trainingPlans.userId} = ${users.id})`,
+      workouts: sql<number>`(select count(*)::int from ${workoutLogs} where ${qualified(workoutLogs.userId)} = ${userId})`,
+      foods: sql<number>`(select count(*)::int from ${foodEntries} where ${qualified(foodEntries.userId)} = ${userId})`,
+      photos: sql<number>`(select count(*)::int from ${bodyPhotos} where ${qualified(bodyPhotos.userId)} = ${userId})`,
+      plans: sql<number>`(select count(*)::int from ${trainingPlans} where ${qualified(trainingPlans.userId)} = ${userId})`,
     })
     .from(users)
     .where(eq(users.id, userId))
