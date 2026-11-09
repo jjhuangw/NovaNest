@@ -3,8 +3,10 @@
 import { revalidatePath } from 'next/cache'
 import { notFound, redirect } from 'next/navigation'
 import { requireAdmin } from '@/lib/auth/session'
-import { deleteUser, setUserDisabled, setUserRole } from '@/lib/admin/users'
+import { deleteUser, setUserDisabled, setUserPlan, setUserRole } from '@/lib/admin/users'
 import { aiLimitsSchema, LIMIT_GROUPS, saveAiLimits } from '@/lib/ai/limits'
+import { isPlan, type Plan } from '@/lib/user/plan'
+import { isISODate } from '@/lib/training/dates'
 
 const UUID = /^[0-9a-f-]{36}$/i
 
@@ -50,8 +52,12 @@ export async function saveAiLimitsAction(formData: FormData) {
     const v = formData.get(name)
     return typeof v === 'string' && /^\d+$/.test(v.trim()) ? Number(v) : NaN
   }
+  const tier = (plan: Plan) => ({
+    ...Object.fromEntries(LIMIT_GROUPS.map((g) => [g, { count: int(`${plan}.${g}.count`), period: formData.get(`${plan}.${g}.period`) }])),
+    photos: int(`${plan}.photos`),
+  })
   const parsed = aiLimitsSchema.safeParse({
-    daily: Object.fromEntries(LIMIT_GROUPS.map((g) => [g, int(`daily.${g}`)])),
+    tiers: { free: tier('free'), pro: tier('pro') },
     burst: { calls: int('burst.calls'), minutes: int('burst.minutes') },
     globalDaily: int('globalDaily'),
   })
@@ -66,4 +72,22 @@ export async function saveAiLimitsAction(formData: FormData) {
   }
   revalidatePath('/admin/ai-usage')
   redirect(`/admin/ai-usage?days=${days}&limitsSaved=${Date.now()}`)
+}
+
+// 方案：可以設定任何人（包含自己）；Pro 的到期日為該日台灣時間 23:59:59，留空表示不到期
+export async function setPlanAction(formData: FormData) {
+  const admin = await requireAdmin()
+  if (!admin) notFound()
+  const id = formData.get('id')
+  const plan = formData.get('plan')
+  const until = formData.get('proUntil')
+  if (typeof id !== 'string' || !UUID.test(id) || !isPlan(plan)) notFound()
+  let proUntil: Date | null = null
+  if (plan === 'pro' && typeof until === 'string' && until !== '') {
+    if (!isISODate(until)) redirect(`/admin/users/${id}?planError=1`)
+    proUntil = new Date(`${until}T23:59:59+08:00`)
+  }
+  await setUserPlan(id, plan, proUntil)
+  revalidatePath('/admin', 'layout')
+  redirect(`/admin/users/${id}?saved=${Date.now()}`)
 }

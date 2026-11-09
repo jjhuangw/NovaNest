@@ -22,12 +22,13 @@ export default async function AdminOverviewPage() {
   return (
     <div className="space-y-12">
       <section>
-        <div className="grid grid-cols-2 gap-px border border-line bg-line sm:grid-cols-3 lg:grid-cols-6">
+        <div className="grid grid-cols-2 gap-px border border-line bg-line sm:grid-cols-4 lg:grid-cols-7">
           <Stat label={to.users} value={formatInt(data.users.total)} />
           <Stat label={to.new7} value={formatInt(data.users.new7)} />
           <Stat label={to.new30} value={formatInt(data.users.new30)} />
           <Stat label={to.active7} value={formatInt(data.active7)} hint={to.activeHint} />
           <Stat label={to.disabled} value={formatInt(data.users.disabled)} />
+          <Stat label={to.pro} value={formatInt(data.users.pro)} />
           <Stat label={to.admins} value={formatInt(data.users.admins)} />
         </div>
         <Link href="/admin/users" className="mt-4 inline-block text-sm font-semibold underline-offset-4 hover:underline">

@@ -1,7 +1,8 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { getAiUsageReport, USAGE_PERIODS, type UsageTotals } from '@/lib/admin/queries'
-import { getAiLimits, globalUsageToday, LIMIT_GROUPS } from '@/lib/ai/limits'
+import { getAiLimits, globalUsageToday, LIMIT_GROUPS, PERIODS } from '@/lib/ai/limits'
+import { PLANS } from '@/lib/user/plan'
 import { SavedToast, SubmitButton } from '@/components/form-feedback'
 import { saveAiLimitsAction } from '../actions'
 import { loadForAdmin } from '@/lib/auth/session'
@@ -50,10 +51,57 @@ export default async function AdminAiUsagePage(props: PageProps<'/admin/ai-usage
           <input type="hidden" name="days" value={days} />
           <fieldset>
             <legend className="mb-2 text-xs font-semibold tracking-wider text-muted">{tg.limits.perUserTitle}</legend>
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-              {LIMIT_GROUPS.map((g) => (
-                <LimitField key={g} name={`daily.${g}`} label={t.aiLimit.features[g]} value={limits.daily[g]} max={g === 'plan' || g === 'plan_translate' ? 100 : 1000} />
-              ))}
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[34rem] border-collapse text-left">
+                <thead>
+                  <tr>
+                    <th className="border-b border-line py-2 pr-3 text-xs font-semibold text-muted">{tg.feature}</th>
+                    {PLANS.map((plan) => (
+                      <th key={plan} className="border-b border-line px-2 py-2 text-xs font-semibold text-muted">
+                        {t.plans.names[plan]}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {LIMIT_GROUPS.map((g) => (
+                    <tr key={g}>
+                      <th scope="row" className="border-b border-line py-2 pr-3 font-normal">
+                        {t.aiLimit.features[g]}
+                      </th>
+                      {PLANS.map((plan) => (
+                        <td key={plan} className="border-b border-line px-2 py-2">
+                          <div className="flex items-center gap-2">
+                            <NumberInput name={`${plan}.${g}.count`} value={limits.tiers[plan][g].count} max={10000} label={`${t.plans.names[plan]} ${t.aiLimit.features[g]}`} />
+                            <select
+                              name={`${plan}.${g}.period`}
+                              defaultValue={limits.tiers[plan][g].period}
+                              aria-label={`${t.plans.names[plan]} ${t.aiLimit.features[g]} ${tg.limits.periodLabel}`}
+                              className="min-h-11 border border-line bg-surface px-2 text-sm focus:border-foreground focus:outline-none"
+                            >
+                              {PERIODS.map((p) => (
+                                <option key={p} value={p}>
+                                  {tg.limits.periods[p]}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                  <tr>
+                    <th scope="row" className="py-2 pr-3 font-normal">
+                      {tg.limits.photos}
+                    </th>
+                    {PLANS.map((plan) => (
+                      <td key={plan} className="px-2 py-2">
+                        <NumberInput name={`${plan}.photos`} value={limits.tiers[plan].photos} max={10000} label={`${t.plans.names[plan]} ${tg.limits.photos}`} />
+                      </td>
+                    ))}
+                  </tr>
+                </tbody>
+              </table>
             </div>
           </fieldset>
           <fieldset className="mt-5">
@@ -213,5 +261,22 @@ function LimitField({ name, label, value, min = 0, max }: { name: string; label:
         className="block min-h-11 w-full border border-line bg-surface px-3 py-2 text-sm tabular-nums focus:border-foreground focus:outline-none"
       />
     </label>
+  )
+}
+
+function NumberInput({ name, value, max, label }: { name: string; value: number; max: number; label: string }) {
+  return (
+    <input
+      type="number"
+      name={name}
+      inputMode="numeric"
+      min={0}
+      max={max}
+      step={1}
+      required
+      defaultValue={value}
+      aria-label={label}
+      className="block min-h-11 w-24 border border-line bg-surface px-3 py-2 text-sm tabular-nums focus:border-foreground focus:outline-none"
+    />
   )
 }

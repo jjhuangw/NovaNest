@@ -6,6 +6,7 @@ import { eq } from 'drizzle-orm'
 import { db } from '@/lib/db/client'
 import { users } from '@/lib/db/schema'
 import { COOKIE_NAME, verifyToken } from './jwt'
+import { effectivePlan, type Plan } from '@/lib/user/plan'
 
 export { COOKIE_NAME }
 
@@ -15,6 +16,9 @@ export interface Session {
   userId: string
   username: string
   role: Role
+  // 目前適用的方案（Pro 過期時為 free）與 Pro 到期時間
+  plan: Plan
+  proUntil: Date | null
 }
 
 // 只驗證 JWT，不查資料庫
@@ -31,11 +35,17 @@ export const getSession = cache(async (): Promise<Session | null> => {
   if (!userId) return null
 
   const [user] = await db
-    .select({ id: users.id, username: users.username, role: users.role, disabledAt: users.disabledAt })
+    .select({ id: users.id, username: users.username, role: users.role, disabledAt: users.disabledAt, plan: users.plan, proUntil: users.proUntil })
     .from(users)
     .where(eq(users.id, userId))
   if (!user || user.disabledAt) return null
-  return { userId: user.id, username: user.username, role: user.role === 'admin' ? 'admin' : 'user' }
+  return {
+    userId: user.id,
+    username: user.username,
+    role: user.role === 'admin' ? 'admin' : 'user',
+    plan: effectivePlan(user.plan, user.proUntil),
+    proUntil: user.proUntil,
+  }
 })
 
 // 管理員專用的頁面與 action 都要呼叫；非管理員一律視為找不到

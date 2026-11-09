@@ -17,6 +17,9 @@ export const users = pgTable('users', {
   role: text('role').default('user').notNull(),
   // 停用時間；非 null 時無法登入，既有登入也會失效
   disabledAt: timestamp('disabled_at'),
+  // 方案：'free' | 'pro'，見 lib/user/plan.ts。pro_until 為 Pro 的到期時間，null 表示不到期
+  plan: text('plan').default('free').notNull(),
+  proUntil: timestamp('pro_until'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 }).enableRLS()
 

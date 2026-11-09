@@ -5,10 +5,12 @@ import { listUsers, USERS_PAGE_SIZE, type UserFilter } from '@/lib/admin/queries
 import { loadForAdmin } from '@/lib/auth/session'
 import { getI18n } from '@/lib/i18n/server'
 import { formatDay, formatInt, tableClass, tdClass, thClass } from '../format'
+import { PlanBadge } from '../plan-badge'
+import { effectivePlan } from '@/lib/user/plan'
 
 export const instant = false
 
-const FILTERS: UserFilter[] = ['all', 'admin', 'disabled']
+const FILTERS: UserFilter[] = ['all', 'pro', 'admin', 'disabled']
 
 export default async function AdminUsersPage(props: PageProps<'/admin/users'>) {
   const params = await props.searchParams
@@ -80,6 +82,7 @@ export default async function AdminUsersPage(props: PageProps<'/admin/users'>) {
             <thead>
               <tr>
                 <th className={thClass}>{tu.username}</th>
+                <th className={thClass}>{tu.plan}</th>
                 <th className={thClass}>{tu.role}</th>
                 <th className={thClass}>{tu.statusLabel}</th>
                 <th className={thClass}>{tu.joined}</th>
@@ -97,6 +100,9 @@ export default async function AdminUsersPage(props: PageProps<'/admin/users'>) {
                       {u.username}
                     </Link>
                     <span className="block text-xs text-muted">{u.email}</span>
+                  </td>
+                  <td className={tdClass}>
+                    <PlanBadge plan={effectivePlan(u.plan, u.proUntil)} proUntil={u.proUntil} expired={u.plan === 'pro' && effectivePlan(u.plan, u.proUntil) === 'free'} t={t} />
                   </td>
                   <td className={tdClass}>{ta.roles[u.role] ?? u.role}</td>
                   <td className={tdClass}>

@@ -5,7 +5,10 @@ import { getUserDetail } from '@/lib/admin/queries'
 import { AI_FEATURES } from '@/lib/ai/usage'
 import { loadForAdmin } from '@/lib/auth/session'
 import { getI18n } from '@/lib/i18n/server'
-import { deleteUserAction, setDisabledAction, setRoleAction } from '../../actions'
+import { deleteUserAction, setDisabledAction, setPlanAction, setRoleAction } from '../../actions'
+import { PlanBadge } from '../../plan-badge'
+import { effectivePlan, PLANS } from '@/lib/user/plan'
+import { isoDateOf } from '@/lib/training/dates'
 import { formatDay, formatInt, formatUsd, tableClass, tdClass, thClass } from '../../format'
 import ConfirmForm from './confirm-form'
 
@@ -16,6 +19,7 @@ export default async function AdminUserPage(props: PageProps<'/admin/users/[id]'
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound()
   const params = await props.searchParams
   const savedAt = typeof params.saved === 'string' ? params.saved : null
+  const planError = params.planError === '1'
 
   const result = await loadForAdmin(() => Promise.all([getUserDetail(id), getI18n()]))
   if (!result) notFound()
@@ -95,6 +99,48 @@ export default async function AdminUserPage(props: PageProps<'/admin/users/[id]'
             </tbody>
           </table>
         </div>
+      </Section>
+
+      <Section title={tu.plan} hint={tu.planHint}>
+        {(() => {
+          const current = effectivePlan(user.plan, user.proUntil)
+          const until = user.plan === 'pro' && user.proUntil ? isoDateOf(user.proUntil) : ''
+          return (
+            <>
+              <p className="text-sm">
+                <PlanBadge plan={current} proUntil={user.proUntil} expired={user.plan === 'pro' && current === 'free'} t={t} />
+              </p>
+              <form action={setPlanAction} className="mt-5 space-y-4">
+                <input type="hidden" name="id" value={user.id} />
+                <fieldset className="flex flex-wrap gap-2">
+                  <legend className="sr-only">{tu.plan}</legend>
+                  {PLANS.map((p) => (
+                    <label key={p}>
+                      <input type="radio" name="plan" value={p} defaultChecked={(user.plan === 'pro' && current === 'pro' ? 'pro' : 'free') === p} className="peer sr-only" />
+                      <span className="block cursor-pointer border border-line px-4 py-2 text-sm font-semibold peer-checked:border-foreground peer-checked:bg-foreground peer-checked:text-background peer-focus-visible:outline-2">
+                        {t.plans.names[p]}
+                      </span>
+                    </label>
+                  ))}
+                </fieldset>
+                <label className="block max-w-xs">
+                  <span className="mb-1 block text-xs text-muted">{tu.proUntil}</span>
+                  <input
+                    type="date"
+                    name="proUntil"
+                    defaultValue={until}
+                    className="block min-h-11 w-full border border-line bg-surface px-3 py-2 text-sm focus:border-foreground focus:outline-none"
+                  />
+                  <span className="mt-1 block text-xs text-muted">{tu.proUntilHint}</span>
+                </label>
+                {planError && <p className="border-l-2 border-accent bg-stone px-3 py-2 text-sm text-accent">{tu.planInvalid}</p>}
+                <button type="submit" className="min-h-11 border border-foreground px-5 text-sm font-semibold hover:bg-foreground hover:text-background">
+                  {tu.savePlan}
+                </button>
+              </form>
+            </>
+          )
+        })()}
       </Section>
 
       <Section title={tu.actions} hint={tu.actionsHint}>

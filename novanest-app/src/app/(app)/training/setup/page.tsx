@@ -18,7 +18,7 @@ export const instant = false
 export const maxDuration = 300
 
 export default async function SetupPage(props: PageProps<'/training/setup'>) {
-  const { edit, error } = await props.searchParams
+  const { edit, error, plan: planParam } = await props.searchParams
   const {
     data: [saved, body, active, { t }],
   } = await loadForUser((userId) => Promise.all([getQuestionnaire(userId), getBodyData(userId), getActivePlan(userId), getI18n()]))
@@ -40,7 +40,11 @@ export default async function SetupPage(props: PageProps<'/training/setup'>) {
           answers={saved.answers}
           gender={body.gender!}
           planCreatedAt={active.createdAt && isoDateOf(active.createdAt)}
-          error={typeof error === 'string' ? (ts.generateErrors[error] ?? null) : null}
+          error={
+            typeof error === 'string' && ts.generateErrors[error]
+              ? `${ts.generateErrors[error]}${error.startsWith('limit_') && planParam === 'free' ? t.aiLimit.upgrade : ''}`
+              : null
+          }
           t={t}
         />
       ) : (

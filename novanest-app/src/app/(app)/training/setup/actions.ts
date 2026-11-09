@@ -84,7 +84,7 @@ async function generateFor(session: Session): Promise<string> {
   if (!saved || !body.gender || body.heightCm === null || body.weightKg === null) return '/training/setup?edit=1'
 
   const limit = await checkAiLimit(session, 'plan')
-  if (!limit.ok) return `/training/setup?error=limit_${limit.reason}`
+  if (!limit.ok) return `/training/setup?error=limit_${limit.reason}${limit.plan === 'free' ? '&plan=free' : ''}`
 
   const thisYear = Number(todayISO().slice(0, 4))
   const result = await generatePlan(

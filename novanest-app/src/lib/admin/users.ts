@@ -3,11 +3,20 @@ import { eq } from 'drizzle-orm'
 import { db } from '@/lib/db/client'
 import { bodyPhotos, users } from '@/lib/db/schema'
 import { storage } from '@/lib/photos/storage'
+import type { Plan } from '@/lib/user/plan'
 
 export async function setUserDisabled(userId: string, disabled: boolean) {
   await db
     .update(users)
     .set({ disabledAt: disabled ? new Date() : null })
+    .where(eq(users.id, userId))
+}
+
+// 設定方案；proUntil 為 null 表示 Pro 不到期（Free 時一律清除）
+export async function setUserPlan(userId: string, plan: Plan, proUntil: Date | null) {
+  await db
+    .update(users)
+    .set({ plan, proUntil: plan === 'pro' ? proUntil : null })
     .where(eq(users.id, userId))
 }
 

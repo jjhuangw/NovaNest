@@ -34,11 +34,14 @@ export default function StoryShare({
   date,
   fileName,
   autoOpen = false,
+  canUsePhoto = true,
 }: {
   card: StoryCard
   date: string
   fileName: string
   autoOpen?: boolean
+  // 用自己的照片當背景是 Pro 功能
+  canUsePhoto?: boolean
 }) {
   const { t } = useI18n()
   const ts = t.log.share
@@ -59,6 +62,8 @@ export default function StoryShare({
   const [draft, setDraft] = useState('')
   const [exported, setExported] = useState<{ key: string; file: File; url: string } | null>(null)
   const [message, setMessage] = useState<string | null>(null)
+  // Free 使用者點了「我的照片」背景時顯示的說明
+  const [proNote, setProNote] = useState(false)
   const [qr, setQr] = useState<string | null>(null)
 
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -222,6 +227,10 @@ export default function StoryShare({
   const setOption = <K extends keyof StoryOptions>(key: K, value: StoryOptions[K]) => setOptions((o) => ({ ...o, [key]: value }))
 
   function chooseTheme(theme: Theme) {
+    if (theme === 'photo' && !canUsePhoto) {
+      setProNote(true)
+      return
+    }
     if (theme === 'photo' && !photo) {
       photoInputRef.current?.click()
       return
@@ -422,6 +431,7 @@ export default function StoryShare({
                     >
                       <span aria-hidden className="h-4 w-4 border border-line" style={{ background: theme === 'photo' ? 'linear-gradient(135deg,#6b7280,#111)' : PALETTES[theme].bg }} />
                       {ts.themes[theme]}
+                      {theme === 'photo' && !canUsePhoto && <span className="border border-current px-1 text-[10px] font-bold leading-tight">PRO</span>}
                     </button>
                   ))}
                   <input ref={photoInputRef} type="file" accept="image/*" className="sr-only" tabIndex={-1} aria-hidden onChange={onPhoto} />
@@ -437,6 +447,7 @@ export default function StoryShare({
                   </div>
                 )}
                 <p className="mt-2 text-xs text-muted">{ts.photoHint}</p>
+                {proNote && <p className="mt-2 border-l-2 border-accent bg-stone px-3 py-2 text-xs">{`${ts.photoProOnly}${t.aiLimit.upgrade}`}</p>}
               </fieldset>
 
               <div>

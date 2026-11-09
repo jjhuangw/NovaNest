@@ -73,6 +73,7 @@ export async function getOverview() {
         new30: sql<number>`count(*) filter (where ${users.createdAt} >= ${since30})::int`,
         disabled: sql<number>`count(*) filter (where ${users.disabledAt} is not null)::int`,
         admins: sql<number>`count(*) filter (where ${users.role} = 'admin')::int`,
+        pro: sql<number>`count(*) filter (where ${users.plan} = 'pro' and (${users.proUntil} is null or ${users.proUntil} > now()))::int`,
       })
       .from(users),
     // 近 7 天有任何紀錄（訓練、飲食、照片）的使用者
@@ -122,7 +123,7 @@ const lastActiveAt = sql`greatest(
   (select max(${qualified(bodyPhotos.createdAt)}) from ${bodyPhotos} where ${qualified(bodyPhotos.userId)} = ${userId})
 )`.mapWith(users.createdAt)
 
-export type UserFilter = 'all' | 'admin' | 'disabled'
+export type UserFilter = 'all' | 'pro' | 'admin' | 'disabled'
 
 export async function listUsers({ q, filter, page }: { q: string; filter: UserFilter; page: number }) {
   const conditions: SQL[] = []
@@ -132,6 +133,8 @@ export async function listUsers({ q, filter, page }: { q: string; filter: UserFi
   }
   if (filter === 'admin') conditions.push(eq(users.role, 'admin'))
   if (filter === 'disabled') conditions.push(isNotNull(users.disabledAt))
+  // 目前有效的 Pro（未到期）
+  if (filter === 'pro') conditions.push(sql`${qualified(users.plan)} = 'pro' and (${qualified(users.proUntil)} is null or ${qualified(users.proUntil)} > now())`)
   const where = conditions.length ? and(...conditions) : undefined
 
   const [rows, [{ total }]] = await Promise.all([
@@ -141,6 +144,8 @@ export async function listUsers({ q, filter, page }: { q: string; filter: UserFi
         username: users.username,
         email: users.email,
         role: users.role,
+        plan: users.plan,
+        proUntil: users.proUntil,
         disabledAt: users.disabledAt,
         createdAt: users.createdAt,
         lastActiveAt,
@@ -167,6 +172,8 @@ export async function getUserDetail(userId: string) {
       username: users.username,
       email: users.email,
       role: users.role,
+      plan: users.plan,
+      proUntil: users.proUntil,
       gender: users.gender,
       birthYear: users.birthYear,
       disabledAt: users.disabledAt,

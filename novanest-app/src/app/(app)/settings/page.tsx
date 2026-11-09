@@ -8,6 +8,9 @@ import { todayISO } from '@/lib/training/dates'
 import { BODY_LIMITS, getBodyData } from '@/lib/user/profile'
 import { USERNAME_MAX } from '@/lib/user/username'
 import { APP_VERSION, buildId } from '@/lib/changelog'
+import { getAiLimits, getUsageCounts } from '@/lib/ai/limits'
+import { countPhotos } from '@/lib/photos/photos'
+import PlanSummary from './plan-summary'
 import { updateProfileAction, updateUsernameAction } from './actions'
 import { LanguageSelect, ThemeSelect, segmentClass } from './preferences'
 
@@ -24,8 +27,11 @@ export default async function SettingsPage(props: PageProps<'/settings'>) {
   const invalid = params.error === 'body'
   const {
     session,
-    data: [body, { t }, cookieStore],
-  } = await loadForUser((userId) => Promise.all([getBodyData(userId), getI18n(), cookies()]))
+    data,
+  } = await loadForUser((userId) =>
+    Promise.all([getBodyData(userId), getI18n(), cookies(), getAiLimits(), getUsageCounts(userId), countPhotos(userId)]),
+  )
+  const [body, { t }, cookieStore, limits, usage, photoStats] = data
   const usernameError =
     params.error === 'username_invalid'
       ? t.auth.errors.invalid_username
@@ -144,6 +150,10 @@ export default async function SettingsPage(props: PageProps<'/settings'>) {
               <SubmitButton label={ts.save} />
             </div>
           </form>
+        </Section>
+
+        <Section title={ts.plan} hint={ts.planHint}>
+          <PlanSummary session={session} limits={limits} usage={usage} photos={photoStats.count} t={t} />
         </Section>
 
         <Section title={ts.preferences} hint={ts.preferencesHint}>

@@ -12,6 +12,15 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.3.0',
+    date: '2026-11-09',
+    announce: true,
+    items: {
+      'zh-TW': ['新增 Free 與 Pro 方案：在「設定 → 方案」可以看到目前的方案，以及 AI 分析、課表等功能這段期間的剩餘次數'],
+      en: ['Free and Pro plans: see your plan and how many AI analyses and plan generations you have left under Settings → Plan'],
+    },
+  },
+  {
     version: '1.2.0',
     date: '2026-11-09',
     announce: true,

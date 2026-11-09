@@ -4,7 +4,8 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { getSession } from '@/lib/auth/session'
 import { isISODate, todayISO } from '@/lib/training/dates'
-import { addPhoto, deletePhoto } from '@/lib/photos/photos'
+import { addPhoto, countPhotos, deletePhoto } from '@/lib/photos/photos'
+import { getAiLimits } from '@/lib/ai/limits'
 import { jpegSize } from '@/lib/photos/jpeg'
 import { MAX_EDGE, MAX_UPLOAD_BYTES, MIN_EDGE } from '@/lib/photos/limits'
 import { isPose } from '@/lib/photos/poses'
@@ -43,6 +44,13 @@ export async function uploadPhotoAction(formData: FormData): Promise<UploadResul
 
   const notesRaw = formData.get('notes')
   const notes = typeof notesRaw === 'string' && notesRaw.trim() ? notesRaw.trim().slice(0, 500) : null
+
+  // 依方案限制照片張數
+  const [limits, current] = await Promise.all([getAiLimits(), countPhotos(session.userId)])
+  const max = limits.tiers[session.plan].photos
+  if (current.count >= max) {
+    return { ok: false, error: `${t.limitReached(max)}${session.plan === 'free' ? messages.aiLimit.upgrade : ''}` }
+  }
 
   try {
     await addPhoto({

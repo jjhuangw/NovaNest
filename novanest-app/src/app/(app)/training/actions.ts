@@ -16,7 +16,7 @@ export async function translatePlanAction() {
   if (!active.id || active.locale === locale || active.translation) redirect('/training')
 
   const limit = await checkAiLimit(session, 'plan_translate')
-  if (!limit.ok) redirect(`/training?translate=limit_${limit.reason}`)
+  if (!limit.ok) redirect(`/training?translate=limit_${limit.reason}${limit.plan === 'free' ? '&plan=free' : ''}`)
 
   const result = await translatePlan({ userId: session.userId, planId: active.id, plan: active.plan, to: locale })
   if (!result.ok) redirect(`/training?translate=${result.reason}`)

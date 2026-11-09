@@ -15,7 +15,7 @@ import TranslateButton from './translate-button'
 export const instant = false
 
 export default async function TrainingPage(props: PageProps<'/training'>) {
-  const { day, generated, translate } = await props.searchParams
+  const { day, generated, translate, plan: planParam } = await props.searchParams
   // 「今天」必須依每次請求計算，不能在預先渲染時決定
   await connection()
   const today = todayKey()
@@ -27,7 +27,10 @@ export default async function TrainingPage(props: PageProps<'/training'>) {
   const text = planText(locale, plan, active.translation)
   // AI 課表的語言和目前語系不同、也還沒有翻譯時，提供翻譯
   const needsTranslation = active.generated && active.locale !== null && active.locale !== locale && !active.translation
-  const translateError = typeof translate === 'string' ? (t.training.translateErrors[translate] ?? t.training.translateErrors.failed) : null
+  const translateError =
+    typeof translate === 'string'
+      ? `${t.training.translateErrors[translate] ?? t.training.translateErrors.failed}${translate.startsWith('limit_') && planParam === 'free' ? t.aiLimit.upgrade : ''}`
+      : null
   const current = plan.days.find((d) => d.day === selected)!
   const isRest = current.exercises.length === 0
 

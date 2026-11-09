@@ -174,7 +174,7 @@ export default async function TrainingLogPage(props: PageProps<'/training/log'>)
 
           {storyCard && (
             <div className="mt-4 flex flex-wrap items-center gap-3">
-              <StoryShare card={storyCard} date={date} fileName={`novanest-${date}.png`} autoOpen={params.share === '1'} />
+              <StoryShare card={storyCard} date={date} fileName={`novanest-${date}.png`} autoOpen={params.share === '1'} canUsePhoto={session.plan === 'pro'} />
               <span className="text-xs text-muted">{t.log.share.savedOnly}</span>
             </div>
           )}
