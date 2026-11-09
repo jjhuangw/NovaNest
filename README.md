@@ -49,3 +49,8 @@ Threads：
 - 版本紀錄在 `novanest-app/src/lib/changelog.ts`，第一筆就是目前版本；設定頁「關於」會顯示版本（部署在 Vercel 時另外顯示 commit），`/changelog` 列出所有版本
 - 只有重要的新功能或修正才需要記錄：在 `changelog.ts` 最前面新增一筆（版本、日期、`announce: true`、中英文項目），並把 `package.json` 的 `version` 改成相同版本；小調整、後台或內部的修改不必每次部署都記錄
 - `announce: true` 的版本，使用者更新後第一次進入 App 會在導覽列下方看到新功能通知，按「知道了」後該裝置不再顯示；`announce: false` 只列在更新紀錄頁
+
+## 訓練趨勢與 3D 肌肉圖
+
+- `/training/trends`（訓練紀錄頁有連結）：近 4／12／26 週的每週總訓練量、每週達成率，以及單一動作的最佳一組重量與推估 1RM（Epley 公式）；圖表為手寫 SVG，系列色 `--chart-1`／`--chart-2` 定義在 `globals.css`
+- 訓練紀錄頁的肌群訓練量改用 three.js（@react-three/fiber）繪製的風格化 3D 人形，只在這一頁按需載入；瀏覽器不支援 WebGL 時自動改用原本的 2D 肌肉圖

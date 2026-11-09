@@ -411,6 +411,11 @@ const zhTW = {
     },
   },
   muscleMap: {
+    model3dLabel: '可旋轉的 3D 肌肉圖，顏色代表本週各肌群的訓練狀態',
+    rotateLabel: '旋轉',
+    rotateLeft: '向左轉',
+    rotateRight: '向右轉',
+    tapHint3d: '左右拖曳可旋轉，點選肌肉查看該肌群的數字',
     heading: '肌群訓練量',
     intro: (week: string) => `${week}・完成組數 ÷ 本週課表組數；顏色表示是否跟上到今天為止應完成的進度`,
     status: { good: '足夠', warning: '接近', critical: '不足', upcoming: '尚未排到' },
