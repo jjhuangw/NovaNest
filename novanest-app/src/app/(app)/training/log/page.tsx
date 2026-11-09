@@ -101,6 +101,9 @@ export default async function TrainingLogPage(props: PageProps<'/training/log'>)
             <Stat label={t.log.monthRate(month)} value={formatRate(monthStats.rate)} />
             <Stat label={t.log.monthDays(month)} value={`${monthStats.trainedDays} / ${monthStats.trainingDays}`} />
           </dl>
+          <Link href="/training/trends" className="mt-6 inline-block text-sm font-semibold underline-offset-4 hover:underline">
+            {t.trends.link} →
+          </Link>
         </div>
       </section>
 

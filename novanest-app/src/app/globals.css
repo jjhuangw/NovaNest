@@ -27,6 +27,9 @@
   --track: #ecebe7;
   --warning-text: #b07a00;
   --status-upcoming: #c3c2b7;
+  /* 圖表系列色（dataviz 驗證器在白底與深色底都通過） */
+  --chart-1: #2a78d6;
+  --chart-2: #d22030;
 }
 
 /* 深色：近黑底、柔和白字，品牌紅提高亮度以維持對比 */
@@ -43,6 +46,8 @@
     --track: #2b2b28;
     --warning-text: #fab219;
     --status-upcoming: #9e9d93;
+    --chart-1: #3987e5;
+    --chart-2: #f0404d;
   }
 }
 
@@ -58,6 +63,8 @@
   --track: #2b2b28;
   --warning-text: #fab219;
   --status-upcoming: #9e9d93;
+    --chart-1: #3987e5;
+    --chart-2: #f0404d;
 }
 
 @theme inline {

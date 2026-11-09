@@ -1,4 +1,5 @@
 import 'server-only'
+import { cache } from 'react'
 import { and, desc, eq } from 'drizzle-orm'
 import { db } from '@/lib/db/client'
 import { planTranslations, trainingPlans } from '@/lib/db/schema'
@@ -21,8 +22,9 @@ export interface ActivePlan {
   translation: PlanText | null
 }
 
-// 使用者最新的 AI 課表與目前語系的翻譯（同一次查詢）；沒有或格式不符時退回範例課表
-export async function getActivePlan(userId: string): Promise<ActivePlan> {
+// 使用者最新的 AI 課表與目前語系的翻譯（同一次查詢）；沒有或格式不符時退回範例課表。
+// 同一個請求內重複呼叫只查一次資料庫。
+export const getActivePlan = cache(async (userId: string): Promise<ActivePlan> => {
   const locale = await getLocale()
   const row = await latestPlanRow(userId, locale)
   if (row) {
@@ -41,7 +43,7 @@ export async function getActivePlan(userId: string): Promise<ActivePlan> {
     console.error('Stored training plan failed validation', row.id)
   }
   return { plan: mockPlan, generated: false, createdAt: null, id: null, locale: null, translation: null }
-}
+})
 
 async function latestPlanRow(userId: string, locale: Locale) {
   try {
