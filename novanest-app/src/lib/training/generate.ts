@@ -153,6 +153,8 @@ function toPlan(raw: ParsedOutput | null, stopReason: string | null): GenerateRe
   // 轉成 TrainingPlan：肌群陣列轉物件（只保留 1 與 0.5）、空字串的選填欄位拿掉
   // 文字清單去掉空白項目並限制數量，避免模型多寫幾條就整份驗證失敗
   const clean = (items: string[], max: number) => items.map((s) => s.trim()).filter(Boolean).slice(0, max)
+  // 數值夾在 plan-schema 允許的範圍內（例如有氧、棒式的休息常被寫成 0），不因一個欄位整份失敗
+  const clamp = (n: number, min: number, max: number) => Math.min(max, Math.max(min, Math.round(n)))
   const candidate = {
     ...raw,
     daysPerWeek: 0,
@@ -164,8 +166,8 @@ function toPlan(raw: ParsedOutput | null, stopReason: string | null): GenerateRe
       notes: clean(d.notes, 8),
       exercises: d.exercises.slice(0, 12).map(({ muscles, substitute, cue, perSide, ...e }) => ({
         ...e,
-        sets: Math.round(e.sets),
-        restSeconds: Math.round(e.restSeconds),
+        sets: clamp(e.sets, 1, 10),
+        restSeconds: clamp(e.restSeconds, 15, 600),
         ...(perSide ? { perSide: true } : {}),
         ...(substitute.trim() ? { substitute } : {}),
         ...(cue.trim() ? { cue: cue.trim().slice(0, 160) } : {}),
