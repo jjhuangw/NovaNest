@@ -20,6 +20,8 @@ export const users = pgTable('users', {
   // 方案：'free' | 'pro'，見 lib/user/plan.ts。pro_until 為 Pro 的到期時間，null 表示不到期
   plan: text('plan').default('free').notNull(),
   proUntil: timestamp('pro_until'),
+  // 最近一次登入或使用 App 的時間（每小時最多更新一次，見 lib/auth/session.ts）；null 表示加入此欄位後尚未上線
+  lastSeenAt: timestamp('last_seen_at'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 }).enableRLS()
 

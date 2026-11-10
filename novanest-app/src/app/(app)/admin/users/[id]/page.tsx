@@ -52,6 +52,7 @@ export default async function AdminUserPage(props: PageProps<'/admin/users/[id]'
           <Field label={tu.gender} value={gender} />
           <Field label={tu.birthYear} value={user.birthYear ? String(user.birthYear) : ta.never} />
           <Field label={tu.joined} value={formatDay(user.createdAt, ta.never)} />
+          <Field label={tu.lastSeen} value={formatDay(user.lastSeenAt, ta.never)} />
           <Field label={tu.lastActive} value={formatDay(user.lastActiveAt, ta.never)} />
         </dl>
         <h3 className="mt-8 text-xs font-semibold tracking-wider text-muted">{tu.records}</h3>
