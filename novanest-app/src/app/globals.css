@@ -1,9 +1,9 @@
 @import "tailwindcss";
 
-/* 深色模式：預設跟隨系統；html[data-theme] 為使用者手動選擇 */
+/* 深色模式：預設淺色；html[data-theme] 為使用者的選擇，system 時跟隨裝置設定 */
 @custom-variant dark {
   @media (prefers-color-scheme: dark) {
-    &:where(:root:not([data-theme="light"]) *, :root:not([data-theme="light"])) {
+    &:where(:root[data-theme="system"] *, :root[data-theme="system"]) {
       @slot;
     }
   }
@@ -34,7 +34,7 @@
 
 /* 深色：近黑底、柔和白字，品牌紅提高亮度以維持對比 */
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
+  :root[data-theme="system"] {
     color-scheme: dark;
     --background: #0e0e0e;
     --foreground: #f2f2f0;

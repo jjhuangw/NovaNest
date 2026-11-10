@@ -12,6 +12,15 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.4.0',
+    date: '2026-11-10',
+    announce: true,
+    items: {
+      'zh-TW': ['預設改為淺色模式；想用深色或跟隨裝置設定，可以在「設定 → 外觀」切換', '新增品牌故事頁，介紹 NovaNest 名字的由來，並提供聯絡信箱 contact@novanestfit.com'],
+      en: ['Light mode is now the default; switch to dark or follow your device under Settings → Appearance', 'New Our story page about where the NovaNest name comes from, with our contact email contact@novanestfit.com'],
+    },
+  },
+  {
     version: '1.3.0',
     date: '2026-11-09',
     announce: true,

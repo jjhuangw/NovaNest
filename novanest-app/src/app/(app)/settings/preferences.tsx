@@ -17,8 +17,7 @@ const legendClass = 'mb-2 block text-xs font-semibold uppercase tracking-wider'
 // 立即套用並記在 cookie，讓下次載入時 layout 的內嵌 script 能在繪製前套用
 function applyTheme(theme: Theme) {
   const root = document.documentElement
-  if (theme === 'system') root.removeAttribute('data-theme')
-  else root.setAttribute('data-theme', theme)
+  root.setAttribute('data-theme', theme)
   document.cookie = `${THEME_COOKIE}=${theme}; path=/; max-age=${PREFERENCE_MAX_AGE}; SameSite=Lax`
 }
 

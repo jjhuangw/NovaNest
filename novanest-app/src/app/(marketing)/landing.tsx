@@ -1,7 +1,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
-import LanguageToggle from '@/components/language-toggle'
 import type { Messages } from '@/lib/i18n/messages'
+import { SiteFooter, SiteHeader } from './site-chrome'
 
 // 對外的產品介紹頁：不讀取登入狀態，任何人都能看
 export default function Landing({ t }: { t: Messages }) {
@@ -13,29 +13,7 @@ export default function Landing({ t }: { t: Messages }) {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="sticky top-0 z-20 border-b border-line bg-background/95 backdrop-blur">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
-          <Link href="/" className="inline-flex shrink-0 items-center gap-2">
-            <span className="h-3 w-3 rounded-full bg-accent" />
-            <span className="text-base font-black uppercase tracking-[0.15em] sm:text-lg sm:tracking-[0.2em]">NovaNest</span>
-          </Link>
-          <nav className="flex items-center gap-4 text-sm font-semibold sm:gap-6">
-            <a href="#features" className="hidden hover:underline sm:inline">
-              {tl.nav.features}
-            </a>
-            <a href="#how" className="hidden hover:underline sm:inline">
-              {tl.nav.how}
-            </a>
-            <LanguageToggle />
-            <Link href="/login" className="hover:underline">
-              {tl.nav.login}
-            </Link>
-            <Link href="/register" className="hidden bg-foreground px-4 py-2 text-background hover:opacity-85 sm:inline-block">
-              {tl.nav.start}
-            </Link>
-          </nav>
-        </div>
-      </header>
+      <SiteHeader t={t} />
 
       <main>
         {/* 主視覺 */}
@@ -140,7 +118,7 @@ export default function Landing({ t }: { t: Messages }) {
         </section>
       </main>
 
-      <footer className="mx-auto max-w-6xl px-6 py-8 text-xs text-muted">{tl.footer}</footer>
+      <SiteFooter t={t} />
     </div>
   )
 }

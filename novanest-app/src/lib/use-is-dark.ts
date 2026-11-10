@@ -2,7 +2,7 @@
 
 import { useSyncExternalStore } from 'react'
 
-// 目前實際顯示的是否為深色：html[data-theme] 優先，否則跟隨系統設定。
+// 目前實際顯示的是否為深色：html[data-theme] 為 system 時跟隨裝置設定，沒有設定時為淺色。
 // 給無法使用 CSS 變數的地方（例如 SVG 屬性）選顏色用。
 const QUERY = '(prefers-color-scheme: dark)'
 
@@ -19,7 +19,7 @@ function subscribe(onChange: () => void) {
 
 function getSnapshot() {
   const theme = document.documentElement.getAttribute('data-theme')
-  return theme ? theme === 'dark' : window.matchMedia(QUERY).matches
+  return theme === 'system' ? window.matchMedia(QUERY).matches : theme === 'dark'
 }
 
 export function useIsDark() {

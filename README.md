@@ -45,6 +45,12 @@ Threads：
 
 未登入的訪客開啟首頁 `/` 會看到產品介紹（已登入者直接進入主頁）；`/about` 不論是否登入都顯示介紹頁，適合拿來分享。
 
+`/story` 是品牌故事頁（名稱由來、理念、聯絡信箱 `contact@novanestfit.com`），不需登入；文案依 `docs/brand.md`。產品介紹頁與品牌故事頁共用 `src/app/(marketing)/site-chrome.tsx` 的頁首與頁尾。
+
+## 外觀
+
+沒有選過主題的使用者一律為淺色；在「設定 → 外觀」選「跟隨系統」時才依裝置的深色模式切換。選擇存在 `theme` cookie，`html[data-theme]` 為 `light`／`dark`／`system`。
+
 ## 版本與新功能通知
 
 - 版本紀錄在 `novanest-app/src/lib/changelog.ts`，第一筆就是目前版本；設定頁「關於」會顯示版本（部署在 Vercel 時另外顯示 commit），`/changelog` 列出所有版本

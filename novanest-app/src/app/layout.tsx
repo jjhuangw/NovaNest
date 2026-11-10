@@ -12,9 +12,9 @@ export const metadata: Metadata = {
   description: '練出新的自己。AI 教練、訓練、飲食，一個地方搞定。',
 }
 
-// 在第一次繪製前套用 cookie 中的主題與語系，避免閃爍；
+// 在第一次繪製前套用 cookie 中的主題與語系，避免閃爍（沒有選過主題時為淺色）；
 // 讀 cookie 而非在伺服器端讀取，讓根 layout 保持可預先渲染
-const PREFERENCES_SCRIPT = `(function(){try{var d=document.documentElement,c=document.cookie;var t=c.match(/(?:^|; )theme=(light|dark)(?:;|$)/);if(t)d.setAttribute("data-theme",t[1]);var l=c.match(/(?:^|; )locale=(zh-TW|en)(?:;|$)/);if(l)d.lang=l[1]}catch(e){}})()`
+const PREFERENCES_SCRIPT = `(function(){try{var d=document.documentElement,c=document.cookie;var t=c.match(/(?:^|; )theme=(system|light|dark)(?:;|$)/);if(t)d.setAttribute("data-theme",t[1]);var l=c.match(/(?:^|; )locale=(zh-TW|en)(?:;|$)/);if(l)d.lang=l[1]}catch(e){}})()`
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
