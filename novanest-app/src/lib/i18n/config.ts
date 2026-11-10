@@ -30,6 +30,8 @@ export function preferredLocale(acceptLanguage: string | null): Locale {
 export const THEMES = ['system', 'light', 'dark'] as const
 export type Theme = (typeof THEMES)[number]
 export const THEME_COOKIE = 'theme'
+// 沒有選過主題時用淺色；選「跟隨系統」才依裝置的深色模式切換
+export const DEFAULT_THEME: Theme = 'light'
 
 export function isTheme(value: unknown): value is Theme {
   return typeof value === 'string' && (THEMES as readonly string[]).includes(value)

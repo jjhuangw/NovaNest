@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { COOKIE_NAME, verifyToken } from '@/lib/auth/jwt'
 import { isLocale, LOCALE_COOKIE, PREFERENCE_MAX_AGE, preferredLocale } from '@/lib/i18n/config'
 
-// 首頁與 /about 是產品介紹，不需登入
-const PUBLIC_PATHS = ['/login', '/register', '/about']
+// 首頁與 /about 是產品介紹、/story 是品牌故事，不需登入
+const PUBLIC_PATHS = ['/login', '/register', '/about', '/story']
 
 // 第一次造訪時依瀏覽器語言記下語系，之後頁面與 <html lang> 都以 cookie 為準
 function withLocale(req: NextRequest, res: NextResponse) {

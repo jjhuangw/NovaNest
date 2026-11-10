@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { cookies } from 'next/headers'
 import { loadForUser } from '@/lib/auth/session'
 import { SavedToast, SubmitButton } from '@/components/form-feedback'
-import { isTheme, THEME_COOKIE } from '@/lib/i18n/config'
+import { DEFAULT_THEME, isTheme, THEME_COOKIE } from '@/lib/i18n/config'
 import { getI18n } from '@/lib/i18n/server'
 import { todayISO } from '@/lib/training/dates'
 import { BODY_LIMITS, getBodyData } from '@/lib/user/profile'
@@ -40,7 +40,7 @@ export default async function SettingsPage(props: PageProps<'/settings'>) {
         : null
   const thisYear = Number(todayISO().slice(0, 4))
   const savedTheme = cookieStore.get(THEME_COOKIE)?.value
-  const theme = isTheme(savedTheme) ? savedTheme : 'system'
+  const theme = isTheme(savedTheme) ? savedTheme : DEFAULT_THEME
   const ts = t.settings
 
   const genders = [
