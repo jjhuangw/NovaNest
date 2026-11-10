@@ -2,7 +2,8 @@ import 'server-only'
 import { cache } from 'react'
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
-import { eq } from 'drizzle-orm'
+import { after } from 'next/server'
+import { and, eq, isNull, lt, or, sql } from 'drizzle-orm'
 import { db } from '@/lib/db/client'
 import { users } from '@/lib/db/schema'
 import { COOKIE_NAME, verifyToken } from './jwt'
@@ -21,6 +22,22 @@ export interface Session {
   proUntil: Date | null
 }
 
+// 後台顯示的「最近上線」：每位使用者最多每小時寫一次資料庫
+const LAST_SEEN_INTERVAL_MS = 60 * 60 * 1000
+
+async function touchLastSeen(userId: string) {
+  // 條件寫在 SQL 裡，同時有多個請求時也只會更新一次
+  await db
+    .update(users)
+    .set({ lastSeenAt: sql`now()` })
+    .where(
+      and(
+        eq(users.id, userId),
+        or(isNull(users.lastSeenAt), lt(users.lastSeenAt, sql`now() - interval '1 hour'`)),
+      ),
+    )
+}
+
 // 只驗證 JWT，不查資料庫
 const getTokenUserId = cache(async (): Promise<string | null> => {
   const token = (await cookies()).get(COOKIE_NAME)?.value
@@ -35,10 +52,14 @@ export const getSession = cache(async (): Promise<Session | null> => {
   if (!userId) return null
 
   const [user] = await db
-    .select({ id: users.id, username: users.username, role: users.role, disabledAt: users.disabledAt, plan: users.plan, proUntil: users.proUntil })
+    .select({ id: users.id, username: users.username, role: users.role, disabledAt: users.disabledAt, plan: users.plan, proUntil: users.proUntil, lastSeenAt: users.lastSeenAt })
     .from(users)
     .where(eq(users.id, userId))
   if (!user || user.disabledAt) return null
+  if (!user.lastSeenAt || Date.now() - user.lastSeenAt.getTime() > LAST_SEEN_INTERVAL_MS) {
+    // 回應送出後才寫入，不拖慢頁面；失敗也不影響使用
+    after(() => touchLastSeen(user.id).catch((e) => console.error('Updating last seen failed', e)))
+  }
   return {
     userId: user.id,
     username: user.username,

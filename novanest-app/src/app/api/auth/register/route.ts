@@ -7,7 +7,7 @@ import { signToken } from '@/lib/auth/jwt'
 import { COOKIE_NAME } from '@/lib/auth/session'
 import { usernameSchema } from '@/lib/user/username'
 import { uniqueViolation } from '@/lib/db/errors'
-import { eq } from 'drizzle-orm'
+import { eq, sql } from 'drizzle-orm'
 
 // 錯誤訊息為代碼，由前端依語系顯示
 const schema = z.object({
@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
   const passwordHash = await bcrypt.hash(password, 12)
   let user
   try {
-    ;[user] = await db.insert(users).values({ username, email, passwordHash }).returning()
+    ;[user] = await db.insert(users).values({ username, email, passwordHash, lastSeenAt: sql`now()` }).returning()
   } catch (e) {
     const constraint = uniqueViolation(e)
     // 同一個 Email 幾乎同時註冊兩次

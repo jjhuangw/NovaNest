@@ -86,6 +86,7 @@ export default async function AdminUsersPage(props: PageProps<'/admin/users'>) {
                 <th className={thClass}>{tu.role}</th>
                 <th className={thClass}>{tu.statusLabel}</th>
                 <th className={thClass}>{tu.joined}</th>
+                <th className={thClass}>{tu.lastSeen}</th>
                 <th className={thClass}>{tu.lastActive}</th>
                 <th className={`${thClass} text-right`}>{tu.workouts}</th>
                 <th className={`${thClass} text-right`}>{tu.foods}</th>
@@ -109,6 +110,7 @@ export default async function AdminUsersPage(props: PageProps<'/admin/users'>) {
                     {u.disabledAt ? <span className="text-accent">{ta.status.disabled}</span> : ta.status.active}
                   </td>
                   <td className={tdClass}>{formatDay(u.createdAt, ta.never)}</td>
+                  <td className={tdClass}>{formatDay(u.lastSeenAt, ta.never)}</td>
                   <td className={tdClass}>{formatDay(u.lastActiveAt, ta.never)}</td>
                   <td className={`${tdClass} text-right`}>{formatInt(u.workouts)}</td>
                   <td className={`${tdClass} text-right`}>{formatInt(u.foods)}</td>

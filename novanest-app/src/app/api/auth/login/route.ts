@@ -5,7 +5,7 @@ import { db } from '@/lib/db/client'
 import { users } from '@/lib/db/schema'
 import { signToken } from '@/lib/auth/jwt'
 import { COOKIE_NAME } from '@/lib/auth/session'
-import { eq } from 'drizzle-orm'
+import { eq, sql } from 'drizzle-orm'
 
 const schema = z.object({
   email: z.string().email(),
@@ -36,6 +36,8 @@ export async function POST(req: NextRequest) {
   if (user.disabledAt) {
     return NextResponse.json({ error: 'account_disabled' }, { status: 403 })
   }
+
+  await db.update(users).set({ lastSeenAt: sql`now()` }).where(eq(users.id, user.id))
 
   const token = await signToken({ userId: user.id, username: user.username })
 
