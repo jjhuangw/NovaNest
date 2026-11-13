@@ -138,7 +138,7 @@ export const aiUsage = pgTable(
   {
     id: uuid('id').primaryKey().defaultRandom(),
     userId: uuid('user_id').references(() => users.id, { onDelete: 'set null' }),
-    // 'plan' | 'plan_translate' | 'food_photo' | 'food_label' | 'food_name'，見 lib/ai/usage.ts
+    // 'plan' | 'plan_translate' | 'food_photo' | 'food_label' | 'food_name' | 'exercise_guide'，見 lib/ai/usage.ts
     feature: text('feature').notNull(),
     // 實際回應的模型（可能是 fallback 後的模型）
     model: text('model').notNull(),
@@ -175,6 +175,18 @@ export const appSettings = pgTable('app_settings', {
   value: jsonb('value').notNull(),
   updatedBy: uuid('updated_by').references(() => users.id, { onDelete: 'set null' }),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}).enableRLS()
+
+// AI 產生的動作說明（器材設定、步驟、發力、常見錯誤），中英文一起存，所有使用者共用。
+// name_key 是課表上動作名稱正規化後的結果（見 lib/training/exercise-catalog.ts）；catalog_id 是對應的圖解，沒有時為 null。
+export const exerciseGuides = pgTable('exercise_guides', {
+  nameKey: text('name_key').primaryKey(),
+  name: text('name').notNull(),
+  catalogId: text('catalog_id'),
+  content: jsonb('content').notNull(),
+  model: text('model').notNull(),
+  createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
 }).enableRLS()
 
 export type User = typeof users.$inferSelect

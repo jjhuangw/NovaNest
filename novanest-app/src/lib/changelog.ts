@@ -12,6 +12,15 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.5.0',
+    date: '2026-11-13',
+    announce: true,
+    items: {
+      'zh-TW': ['課表上的動作附上示範圖（人與器材的起始、結束姿勢），點「怎麼做・怎麼發力」可以看器材設定、動作步驟、發力與感受，以及常見錯誤'],
+      en: ['Exercises in your plan now show demo photos of the start and finish with the equipment. Tap “How to do it” for setup, steps, where to feel it, and common mistakes'],
+    },
+  },
+  {
     version: '1.4.0',
     date: '2026-11-10',
     announce: true,
