@@ -9,7 +9,10 @@ import { getActivePlan } from '@/lib/training/plan-store'
 import { planText } from '@/lib/training/plan-copy'
 import { getI18n } from '@/lib/i18n/server'
 import { formatDate, isoDateOf, todayKey } from '@/lib/training/dates'
+import { matchCatalog } from '@/lib/training/exercise-catalog'
+import { getGuides, guideKey } from '@/lib/training/exercise-guide'
 import { translatePlanAction } from './actions'
+import ExerciseGuide from './exercise-guide'
 import TranslateButton from './translate-button'
 
 export const instant = false
@@ -21,8 +24,18 @@ export default async function TrainingPage(props: PageProps<'/training'>) {
   const today = todayKey()
   const selected = isDayKey(day) ? day : today
   const {
-    data: [{ locale, t }, questionnaire, active],
-  } = await loadForUser((userId) => Promise.all([getI18n(), getQuestionnaire(userId), getActivePlan(userId)]))
+    data: [{ locale, t }, questionnaire, active, guides],
+  } = await loadForUser((userId) =>
+    Promise.all([
+      getI18n(),
+      getQuestionnaire(userId),
+      getActivePlan(userId),
+      // 這一天各動作已產生過的說明（課表與語系也是同一個請求內快取的結果）
+      Promise.all([getActivePlan(userId), getI18n()]).then(([a, { locale }]) =>
+        getGuides(a.plan.days.find((d) => d.day === selected)?.exercises.map((e) => e.name) ?? [], locale),
+      ),
+    ]),
+  )
   const { plan } = active
   const text = planText(locale, plan, active.translation)
   // AI 課表的語言和目前語系不同、也還沒有翻譯時，提供翻譯
@@ -139,22 +152,43 @@ export default async function TrainingPage(props: PageProps<'/training'>) {
               <p className="mt-6 bg-stone px-6 py-10 text-center text-muted">{t.training.restDay}</p>
             ) : (
               <ol className="mt-6 divide-y divide-line border-y border-line">
-                {current.exercises.map((e, i) => (
-                  <li key={e.name} className="flex items-baseline gap-4 py-4">
-                    <span className="w-6 shrink-0 text-sm font-semibold text-muted">{String(i + 1).padStart(2, '0')}</span>
-                    <span className="flex-1 font-semibold">
-                      {text.exercise(e.name)}
-                      {e.cue && <span className="mt-1 block text-xs font-normal text-foreground/80">{t.training.cue(text.cue(e.name, e.cue)!)}</span>}
-                      {e.substitute && (
-                        <span className="mt-1 block text-xs font-normal text-muted">{t.training.substitute(text.substitute(e.name, e.substitute)!)}</span>
-                      )}
-                    </span>
-                    <span className="text-right text-sm tabular-nums">
-                      {t.training.volume(e.sets, text.reps(e.name, e.reps), e.perSide)}
-                      <span className="block text-xs text-muted">{t.training.restFor(formatDuration(e.restSeconds))}</span>
-                    </span>
-                  </li>
-                ))}
+                {current.exercises.map((e, i) => {
+                  const guide = guides.get(guideKey(e.name)) ?? null
+                  const imageId = guide?.catalogId ?? matchCatalog(e.name)
+                  return (
+                    <li key={e.name} className="py-4">
+                      <div className="flex items-start gap-3 sm:gap-4">
+                        <span className="w-6 shrink-0 pt-0.5 text-sm font-semibold text-muted">{String(i + 1).padStart(2, '0')}</span>
+                        {imageId && (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={`/exercises/${imageId}-0.webp`}
+                            alt=""
+                            width={72}
+                            height={48}
+                            loading="lazy"
+                            className="h-10 w-[60px] shrink-0 bg-stone object-cover sm:h-12 sm:w-[72px]"
+                          />
+                        )}
+                        <div className="min-w-0 flex-1 font-semibold">
+                          {text.exercise(e.name)}
+                          {e.cue && <span className="mt-1 block text-xs font-normal text-foreground/80">{t.training.cue(text.cue(e.name, e.cue)!)}</span>}
+                          {e.substitute && (
+                            <span className="mt-1 block text-xs font-normal text-muted">{t.training.substitute(text.substitute(e.name, e.substitute)!)}</span>
+                          )}
+                        </div>
+                        <span className="shrink-0 pt-0.5 text-right text-sm tabular-nums">
+                          {t.training.volume(e.sets, text.reps(e.name, e.reps), e.perSide)}
+                          <span className="block text-xs text-muted">{t.training.restFor(formatDuration(e.restSeconds))}</span>
+                        </span>
+                      </div>
+                      {/* 說明展開後占滿整列，只和編號對齊縮排 */}
+                      <div className="pl-9 sm:pl-10">
+                        <ExerciseGuide name={e.name} displayName={text.exercise(e.name)} catalogId={imageId} initialGuide={guide} />
+                      </div>
+                    </li>
+                  )
+                })}
               </ol>
             )}
           </div>
