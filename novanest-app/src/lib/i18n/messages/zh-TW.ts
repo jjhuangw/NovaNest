@@ -341,6 +341,9 @@ const zhTW = {
     },
   },
   log: {
+    musclesWorked: '訓練部位',
+    primaryMuscles: '主要',
+    secondaryMuscles: '次要',
     title: '訓練紀錄',
     intro: '依照日期登記每組的重量與次數，填了次數的組即算完成。',
     weekRate: '本週達成率',

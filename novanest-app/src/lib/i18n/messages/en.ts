@@ -343,6 +343,9 @@ const en: Messages = {
     },
   },
   log: {
+    musclesWorked: 'Muscles worked',
+    primaryMuscles: 'Primary',
+    secondaryMuscles: 'Secondary',
     title: 'Training log',
     intro: 'Log the weight and reps of each set by date. A set counts as done once reps are filled in.',
     weekRate: 'This week',

@@ -23,6 +23,7 @@ import { getI18n } from '@/lib/i18n/server'
 import type { Messages } from '@/lib/i18n/messages'
 import { saveWorkoutLogAction } from './actions'
 import { SavedToast, SubmitButton } from '@/components/form-feedback'
+import ExerciseMuscles from './exercise-muscles'
 import MuscleMap from './muscle-map'
 import { RestButton, RestTimerProvider } from './rest-timer'
 import StoryShare, { type StoryCard } from './story-share'
@@ -216,6 +217,7 @@ export default async function TrainingLogPage(props: PageProps<'/training/log'>)
                           <RestButton label={text.exercise(e.name)} seconds={e.restSeconds} />
                         </span>
                       </div>
+                      <ExerciseMuscles muscles={e.muscles} gender={gender ?? 'male'} />
                       {e.cue && <p className="mt-2 text-xs text-muted">{t.training.cue(text.cue(e.name, e.cue)!)}</p>}
                       <div className="mt-2 grid grid-cols-[3.5rem_1fr_1fr] items-center gap-x-3 gap-y-2 text-sm">
                         <span />
