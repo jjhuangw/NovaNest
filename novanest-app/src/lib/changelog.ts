@@ -16,8 +16,14 @@ export const CHANGELOG: Release[] = [
     date: '2026-11-21',
     announce: false,
     items: {
-      'zh-TW': ['輸入食物名稱自動帶入營養素時，之前查過的食物會直接帶入，速度更快，也不會用掉 AI 估算的次數'],
-      en: ['Foods that have been looked up before now fill in their nutrients instantly when you type the name, without using up your AI estimates'],
+      'zh-TW': [
+        '輸入食物名稱自動帶入營養素時，之前查過的食物會直接帶入，速度更快，也不會用掉 AI 估算的次數；份量不同（例如 2 個、300 g）時會自動換算',
+        '輸入食物名稱時會列出之前查過的食物，點一下就能帶入',
+      ],
+      en: [
+        'Foods that have been looked up before now fill in their nutrients instantly when you type the name, without using up your AI estimates, and are scaled when you enter a different portion (e.g. 2 pieces, 300 g)',
+        'While typing a food name, pick from foods looked up before to fill it in',
+      ],
     },
   },
   {

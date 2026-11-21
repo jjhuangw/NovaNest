@@ -8,7 +8,7 @@ import { getI18n } from '@/lib/i18n/server'
 import { checkAiLimit } from '@/lib/ai/limits'
 import { limitMessage } from '@/lib/ai/limit-message'
 import { analyzeFoodImage, estimateFoodByName } from '@/lib/nutrition/analyze'
-import { findFoodEstimate } from '@/lib/nutrition/food-estimates'
+import { findFoodEstimate, searchFoodEstimates } from '@/lib/nutrition/food-estimates'
 import { addEntries, deleteEntry, updateEntry } from '@/lib/nutrition/entries'
 import { foodItemSchema, MAX_ITEMS_PER_SAVE, MEALS, SOURCES, type FoodItem } from '@/lib/nutrition/nutrients'
 import { jpegSize } from '@/lib/photos/jpeg'
@@ -76,6 +76,22 @@ export async function estimateFoodAction(input: { name: string; amount: string }
   const result = await estimateFoodByName({ userId: session.userId, name, amount, locale })
   if (!result.ok) return { ok: false, error: errors[result.reason === 'unrecognized' ? 'unrecognized_name' : result.reason] }
   return { ok: true, item: result.items[0] }
+}
+
+// 輸入名稱時的建議清單：只查之前估算過的紀錄，不呼叫 AI
+export async function searchFoodAction(query: string): Promise<FoodItem[]> {
+  const session = await getSession()
+  if (!session) redirect('/login')
+  const { locale } = await getI18n()
+  if (typeof query !== 'string') return []
+  const q = query.trim().slice(0, 100)
+  if (!q) return []
+  try {
+    return await searchFoodEstimates({ query: q, locale })
+  } catch (e) {
+    console.error('Searching food estimates failed', e)
+    return []
+  }
 }
 
 const saveSchema = z.object({

@@ -588,6 +588,7 @@ const en: Messages = {
     itemName: 'Food',
     itemNamePlaceholder: 'e.g. chicken breast bento',
     estimate: 'Fill in',
+    suggestions: 'Looked up before',
     estimating: 'Looking up…',
     estimatedNote: 'AI estimate for a typical serving. Edit the values directly, or use Portion below to match what you actually ate.',
     amount: 'Portion (optional)',
