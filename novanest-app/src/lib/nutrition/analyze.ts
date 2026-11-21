@@ -4,6 +4,7 @@ import { betaZodOutputFormat } from '@anthropic-ai/sdk/helpers/beta/zod'
 import { z } from 'zod'
 import { recordAiUsage } from '@/lib/ai/usage'
 import type { Locale } from '@/lib/i18n/config'
+import { saveFoodEstimate } from './food-estimates'
 import { foodItemSchema, type FoodItem } from './nutrients'
 
 export type AnalyzeMode = 'photo' | 'label'
@@ -73,13 +74,15 @@ export async function analyzeFoodImage(input: {
     .filter(Boolean)
     .join('\n')
 
-  return requestItems(input.userId, input.mode === 'photo' ? 'food_photo' : 'food_label', PROMPTS[input.mode], 'medium', [
+  const { result } = await requestItems(input.userId, input.mode === 'photo' ? 'food_photo' : 'food_label', PROMPTS[input.mode], 'medium', [
     { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: Buffer.from(input.jpeg).toString('base64') } },
     { type: 'text', text },
   ])
+  return result
 }
 
-// 依食物名稱估算一份的營養素，給手動輸入時自動帶入
+// 依食物名稱估算一份的營養素，給手動輸入時自動帶入。
+// 估算成功的結果存進 food_estimates 共用，之後同名稱與份量先查那裡（見 lib/nutrition/food-estimates.ts）。
 export async function estimateFoodByName(input: { userId: string; name: string; amount: string | null; locale: Locale }): Promise<AnalyzeResult> {
   const text = [
     LANGUAGE[input.locale],
@@ -89,7 +92,11 @@ export async function estimateFoodByName(input: { userId: string; name: string; 
     .filter(Boolean)
     .join('\n')
   // 只是查一般份量的數值，用較低的 effort 讓回應快一點
-  return requestItems(input.userId, 'food_name', PROMPTS.name, 'low', [{ type: 'text', text }])
+  const { result, model } = await requestItems(input.userId, 'food_name', PROMPTS.name, 'low', [{ type: 'text', text }])
+  if (result.ok && model) {
+    await saveFoodEstimate({ name: input.name, amount: input.amount, locale: input.locale, item: result.items[0], model, userId: input.userId })
+  }
+  return result
 }
 
 type Content = Anthropic.Beta.BetaContentBlockParam[]
@@ -100,8 +107,8 @@ async function requestItems(
   system: string,
   effort: 'low' | 'medium',
   content: Content,
-): Promise<AnalyzeResult> {
-  if (!isAnalyzerConfigured()) return { ok: false, reason: 'unconfigured' }
+): Promise<{ result: AnalyzeResult; model: string | null }> {
+  if (!isAnalyzerConfigured()) return { result: { ok: false, reason: 'unconfigured' }, model: null }
   client ??= new Anthropic()
 
   let response
@@ -118,12 +125,12 @@ async function requestItems(
     })
   } catch (e) {
     console.error('Food analysis request failed', e)
-    return { ok: false, reason: 'failed' }
+    return { result: { ok: false, reason: 'failed' }, model: null }
   }
 
   const result = toItems(response.parsed_output, response.stop_reason)
   await recordAiUsage({ userId, feature, response, success: result.ok })
-  return result
+  return { result, model: response.model }
 }
 
 function toItems(parsed: z.infer<typeof outputSchema> | null, stopReason: string | null): AnalyzeResult {

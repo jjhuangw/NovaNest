@@ -589,6 +589,7 @@ const zhTW = {
     itemName: '食物名稱',
     itemNamePlaceholder: '例如：雞胸肉便當',
     estimate: '帶入營養素',
+    suggestions: '之前查過的食物',
     estimating: '查詢中…',
     estimatedNote: 'AI 依一般份量估算，可以直接修改數值，或用下方的「份量」調整實際吃的量。',
     amount: '份量（選填）',

@@ -1,6 +1,6 @@
 'use client'
 
-import { useId, useState, useTransition } from 'react'
+import { useEffect, useId, useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { SavedToast } from '@/components/form-feedback'
 import { useI18n } from '@/lib/i18n/client'
@@ -15,13 +15,14 @@ import {
   UNITS,
   type Meal,
   type NutrientKey,
+  type FoodItem,
   type Source,
 } from '@/lib/nutrition/nutrients'
 import { checkImage, compressImage, imageProblemMessage } from '@/lib/photos/compress'
 import { ACCEPT_ATTR } from '@/lib/photos/limits'
 import { baseFrom, draftFrom, emptyDraft, hasMacros, parseNumber, toItem, withServings, withValue, type Draft } from './food-draft'
 import { inputClass, labelClass, MacroRatio, NutrientInput, PortionFields } from './food-fields'
-import { analyzeFoodAction, estimateFoodAction, saveFoodAction } from './actions'
+import { analyzeFoodAction, estimateFoodAction, saveFoodAction, searchFoodAction } from './actions'
 
 
 export default function AddFoodForm({ date, defaultMeal }: { date: string; defaultMeal: Meal }) {
@@ -142,6 +143,21 @@ export default function AddFoodForm({ date, defaultMeal }: { date: string; defau
   function autoEstimate(d: Draft) {
     const name = d.name.trim()
     if (name && !hasMacros(d) && d.estimatedFor !== name) estimate(d, { auto: true })
+  }
+
+  // 從建議清單選了之前查過的食物：名稱、份量與營養素都換成那一筆，保留目前的份量倍數
+  function pick(key: number, item: FoodItem) {
+    setError(null)
+    setDrafts((ds) =>
+      ds.map((x) =>
+        x.key === key
+          ? withServings(
+              { ...x, name: item.name, amount: item.amount ?? '', base: baseFrom(item), estimatedFor: item.name, estimated: true },
+              x.servings,
+            )
+          : x,
+      ),
+    )
   }
 
   function update(key: number, patch: Partial<Draft>) {
@@ -277,6 +293,7 @@ export default function AddFoodForm({ date, defaultMeal }: { date: string; defau
                 estimating={estimatingKey === d.key}
                 onEstimate={() => estimate(d)}
                 onNameBlur={() => autoEstimate(d)}
+                onPick={(item) => pick(d.key, item)}
                 t={t}
                 onChange={(patch) => update(d.key, patch)}
                 onValue={(k, v) => updateValue(d.key, k, v)}
@@ -337,6 +354,7 @@ function DraftEditor({
   estimating,
   onEstimate,
   onNameBlur,
+  onPick,
   t,
   onChange,
   onValue,
@@ -349,6 +367,7 @@ function DraftEditor({
   estimating: boolean
   onEstimate: () => void
   onNameBlur: () => void
+  onPick: (item: FoodItem) => void
   t: Messages['nutrition']
   onChange: (patch: Partial<Draft>) => void
   onValue: (key: NutrientKey, value: string) => void
@@ -356,6 +375,13 @@ function DraftEditor({
   onRemove: () => void
 }) {
   const id = useId()
+  const suggest = useSuggestions()
+  const listId = `${id}-suggestions`
+  const showList = suggest.open && suggest.items.length > 0
+  function choose(item: FoodItem) {
+    suggest.close()
+    onPick(item)
+  }
   const hasExtras = EXTRAS.some((k) => draft.values[k] !== '')
   return (
     <li className="border-b border-line pb-6">
@@ -373,22 +399,81 @@ function DraftEditor({
             {t.itemName}
           </label>
           <div className="flex gap-2">
-            <input
-              id={`${id}-name`}
-              value={draft.name}
-              onChange={(e) => onChange({ name: e.target.value })}
-              onBlur={onNameBlur}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
-                  e.preventDefault()
-                  onEstimate()
-                }
-              }}
-              maxLength={100}
-              required
-              placeholder={t.itemNamePlaceholder}
-              className={inputClass}
-            />
+            <div className="relative min-w-0 flex-1">
+              <input
+                id={`${id}-name`}
+                value={draft.name}
+                onChange={(e) => {
+                  onChange({ name: e.target.value })
+                  suggest.search(e.target.value)
+                }}
+                onBlur={() => {
+                  suggest.close()
+                  onNameBlur()
+                }}
+                onKeyDown={(e) => {
+                  if (e.nativeEvent.isComposing) return
+                  if (showList && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) {
+                    e.preventDefault()
+                    suggest.move(e.key === 'ArrowDown' ? 1 : -1)
+                  } else if (showList && e.key === 'Escape') {
+                    e.preventDefault()
+                    suggest.close()
+                  } else if (e.key === 'Enter') {
+                    e.preventDefault()
+                    const item = showList && suggest.active >= 0 ? suggest.items[suggest.active] : null
+                    if (item) choose(item)
+                    else {
+                      suggest.close()
+                      onEstimate()
+                    }
+                  }
+                }}
+                role="combobox"
+                aria-autocomplete="list"
+                aria-expanded={showList}
+                aria-controls={listId}
+                aria-activedescendant={showList && suggest.active >= 0 ? `${listId}-${suggest.active}` : undefined}
+                autoComplete="off"
+                maxLength={100}
+                required
+                placeholder={t.itemNamePlaceholder}
+                className={inputClass}
+              />
+              {showList && (
+                <ul
+                  id={listId}
+                  role="listbox"
+                  aria-label={t.suggestions}
+                  className="absolute inset-x-0 top-full z-10 mt-1 max-h-72 overflow-y-auto border border-foreground bg-background text-sm"
+                >
+                  <li role="presentation" className="px-3 pt-2 pb-1 text-xs text-muted">
+                    {t.suggestions}
+                  </li>
+                  {suggest.items.map((item, i) => (
+                    <li
+                      key={`${item.name}-${i}`}
+                      id={`${listId}-${i}`}
+                      role="option"
+                      aria-selected={i === suggest.active}
+                      // 用 mousedown 並取消預設行為，輸入框才不會先失去焦點而觸發自動估算
+                      onMouseDown={(e) => {
+                        e.preventDefault()
+                        choose(item)
+                      }}
+                      onMouseEnter={() => suggest.setActive(i)}
+                      className={`flex cursor-pointer items-baseline justify-between gap-3 px-3 py-2 ${i === suggest.active ? 'bg-stone' : ''}`}
+                    >
+                      <span className="min-w-0">
+                        <span className="font-semibold">{item.name}</span>
+                        {item.amount && <span className="ml-2 text-xs text-muted">{item.amount}</span>}
+                      </span>
+                      <span className="shrink-0 tabular-nums text-xs text-muted">{formatAmount(item.kcal, 'kcal')} kcal</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
             <button
               type="button"
               onClick={onEstimate}
@@ -439,4 +524,59 @@ function DraftEditor({
       </details>
     </li>
   )
+}
+
+// 輸入名稱時查之前估算過的食物（不呼叫 AI）。停止輸入一下子才查詢，只採用最後一次查詢的結果
+function useSuggestions() {
+  const [items, setItems] = useState<FoodItem[]>([])
+  const [open, setOpen] = useState(false)
+  const [active, setActive] = useState(-1)
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const seq = useRef(0)
+
+  useEffect(() => () => {
+    if (timer.current) clearTimeout(timer.current)
+  }, [])
+
+  function cancel() {
+    if (timer.current) clearTimeout(timer.current)
+    seq.current++
+  }
+
+  function search(value: string) {
+    cancel()
+    const q = value.trim()
+    if (!q) {
+      setItems([])
+      setOpen(false)
+      return
+    }
+    const mine = seq.current
+    timer.current = setTimeout(async () => {
+      try {
+        const found = await searchFoodAction(q)
+        if (mine !== seq.current) return
+        setItems(found)
+        setActive(-1)
+        setOpen(true)
+      } catch {
+        // 建議只是輔助，查不到就不顯示
+      }
+    }, 250)
+  }
+
+  function close() {
+    cancel()
+    setOpen(false)
+    setActive(-1)
+  }
+
+  function move(step: number) {
+    const n = items.length
+    if (n === 0) return
+    // 還沒選任何一項時，往下選第一項、往上選最後一項；之後循環
+    setActive((a) => (a < 0 ? (step > 0 ? 0 : n - 1) : (a + step + n) % n))
+  }
+
+  return { items, open, active, setActive, search, close, move }
 }
