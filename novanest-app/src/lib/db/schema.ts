@@ -189,6 +189,25 @@ export const exerciseGuides = pgTable('exercise_guides', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
 }).enableRLS()
 
+// 以名稱估算過的食物營養素（AI 產生、所有使用者共用），同名稱與份量再次查詢時直接使用，不再呼叫 AI。
+// name_key / amount_key 是正規化後的名稱與份量（見 lib/nutrition/food-estimates.ts），沒有填份量時 amount_key 為空字串。
+// item 為 FoodItem（lib/nutrition/nutrients.ts），讀出時以 foodItemSchema 驗證。
+export const foodEstimates = pgTable(
+  'food_estimates',
+  {
+    nameKey: text('name_key').notNull(),
+    amountKey: text('amount_key').notNull(),
+    locale: text('locale').notNull(),
+    item: jsonb('item').notNull(),
+    model: text('model').notNull(),
+    // 從這裡直接取用（沒有呼叫 AI）的次數
+    hits: integer('hits').default(0).notNull(),
+    createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.nameKey, t.amountKey, t.locale] })],
+).enableRLS()
+
 export type User = typeof users.$inferSelect
 export type NewUser = typeof users.$inferInsert
 export type BodyStats = typeof bodyStats.$inferSelect

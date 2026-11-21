@@ -12,6 +12,15 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.6.0',
+    date: '2026-11-21',
+    announce: true,
+    items: {
+      'zh-TW': ['輸入食物名稱自動帶入營養素時，之前查過的食物會直接帶入，速度更快，也不會用掉 AI 估算的次數'],
+      en: ['Foods that have been looked up before now fill in their nutrients instantly when you type the name, without using up your AI estimates'],
+    },
+  },
+  {
     version: '1.5.0',
     date: '2026-11-13',
     announce: true,

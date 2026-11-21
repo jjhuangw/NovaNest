@@ -8,6 +8,7 @@ import { getI18n } from '@/lib/i18n/server'
 import { checkAiLimit } from '@/lib/ai/limits'
 import { limitMessage } from '@/lib/ai/limit-message'
 import { analyzeFoodImage, estimateFoodByName } from '@/lib/nutrition/analyze'
+import { findFoodEstimate } from '@/lib/nutrition/food-estimates'
 import { addEntries, deleteEntry, updateEntry } from '@/lib/nutrition/entries'
 import { foodItemSchema, MAX_ITEMS_PER_SAVE, MEALS, SOURCES, type FoodItem } from '@/lib/nutrition/nutrients'
 import { jpegSize } from '@/lib/photos/jpeg'
@@ -64,6 +65,10 @@ export async function estimateFoodAction(input: { name: string; amount: string }
   const name = typeof input?.name === 'string' ? input.name.trim().slice(0, 100) : ''
   if (!name) return { ok: false, error: errors.nameRequired }
   const amount = typeof input.amount === 'string' && input.amount.trim() ? input.amount.trim().slice(0, 100) : null
+
+  // 之前估算過同一個名稱與份量就直接使用，不呼叫 AI，也不計入使用次數
+  const known = await findFoodEstimate({ name, amount, locale })
+  if (known) return { ok: true, item: known }
 
   const limit = await checkAiLimit(session, 'food_name')
   if (!limit.ok) return { ok: false, error: limitMessage(t, limit, t.aiLimit.features.food_name) }
