@@ -623,6 +623,8 @@ const en: Messages = {
       unrecognized_label: "Couldn't read a nutrition label. Take a clearer photo or enter it manually.",
       unrecognized_name: "Couldn't find this food. Try another name or enter the values yourself.",
       nameRequired: 'Enter a food name first',
+      amountStale: 'The portion changed but the nutrients couldn’t be converted. Tap Fill in to estimate again, or edit the values.',
+      amountStaleEdit: 'The portion changed but the nutrients couldn’t be converted. Please edit the values.',
       failed: 'AI analysis failed. Please try again later.',
       invalid: 'Make sure every item has a name and valid numbers.',
       future: "You can't log food for a future date.",

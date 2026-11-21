@@ -71,6 +71,21 @@ const weightFamily = (unit: string) => (/^(ml|毫升)$/i.test(unit) ? 'ml' : 'g'
 // 先比重量或容量，再比相同的數量單位；對不上時回傳 null。
 export function portionFactor(baseAmount: string | null, requested: string): number | null {
   if (!baseAmount) return null
+  const factor = rawFactor(baseAmount, requested)
+  if (factor === null) return null
+  // scaleAmount 對沒有重量的份量會在後面加上「× 倍數」（例如「1 個 × 1.5」），換算時要算進去
+  const scaled = factor * (trailingTimes(requested) / trailingTimes(baseAmount))
+  // 與份量欄位的倍數同樣的範圍，超出多半是對錯了
+  return scaled >= 0.05 && scaled <= 50 ? scaled : null
+}
+
+function trailingTimes(amount: string): number {
+  const m = amount.match(/[×x*]\s*(\d+(?:\.\d+)?)\s*$/i)
+  const n = m ? Number(m[1]) : 1
+  return n > 0 ? n : 1
+}
+
+function rawFactor(baseAmount: string, requested: string): number | null {
   let factor: number | null = null
   const bw = parseWeight(baseAmount)
   const rw = parseWeight(requested)
@@ -80,6 +95,5 @@ export function portionFactor(baseAmount: string | null, requested: string): num
     const rc = parseCount(requested)
     if (bc && rc && bc.unit === rc.unit) factor = rc.value / bc.value
   }
-  // 與份量欄位的倍數同樣的範圍，超出多半是對錯了
-  return factor !== null && factor >= 0.05 && factor <= 50 ? factor : null
+  return factor
 }

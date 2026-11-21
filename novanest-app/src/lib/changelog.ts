@@ -12,6 +12,15 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.6.1',
+    date: '2026-11-21',
+    announce: false,
+    items: {
+      'zh-TW': ['修正：帶入營養素後再修改份量（例如改成 2 個、300 g），營養素沒有跟著換算、存成一份的問題；新增與編輯飲食紀錄都已修正'],
+      en: ['Fixed: changing the portion after nutrients were filled in (e.g. to 2 pieces or 300 g) now rescales the nutrients instead of saving one serving, both when adding and editing food entries'],
+    },
+  },
+  {
     version: '1.6.0',
     date: '2026-11-21',
     announce: false,
