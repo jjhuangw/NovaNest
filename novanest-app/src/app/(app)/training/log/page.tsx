@@ -27,7 +27,7 @@ import ExerciseMuscles from './exercise-muscles'
 import MuscleMap from './muscle-map'
 import { RestButton, RestTimerProvider } from './rest-timer'
 import StoryShare, { type StoryCard } from './story-share'
-import SwapField from './swap-field'
+import SwapField from '../swap-field'
 
 export const instant = false
 
@@ -225,8 +225,10 @@ export default async function TrainingLogPage(props: PageProps<'/training/log'>)
                       <ExerciseMuscles muscles={e.muscles} gender={gender ?? 'male'} />
                       {e.cue && <p className="mt-2 text-xs text-muted">{t.training.cue(text.cue(e.name, e.cue)!)}</p>}
                       <SwapField
-                        date={date}
+                        mode="log"
+                        day={day.day}
                         exerciseIndex={i}
+                        exerciseName={e.name}
                         exerciseLabel={text.exercise(e.name)}
                         planSubstitute={text.substitute(e.name, e.substitute)}
                         defaultValue={swappedName(i, e.name)}

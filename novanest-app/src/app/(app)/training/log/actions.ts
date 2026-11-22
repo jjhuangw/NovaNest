@@ -6,6 +6,7 @@ import { plannedSetsFor } from '@/lib/training/completion'
 import { dayKeyOf, isISODate, todayISO } from '@/lib/training/dates'
 import { saveWorkoutLog, type LoggedSet } from '@/lib/training/logs'
 import { getActivePlan } from '@/lib/training/plan-store'
+import { isDayKey } from '@/lib/training/plan'
 import { checkAiLimit } from '@/lib/ai/limits'
 import { limitMessage } from '@/lib/ai/limit-message'
 import { getI18n } from '@/lib/i18n/server'
@@ -67,16 +68,16 @@ export async function saveWorkoutLogAction(formData: FormData) {
 export type SwapActionResult = { ok: true; options: SwapOption[] } | { ok: false; error: string }
 
 // 依手邊的器材建議替代動作：之前查過同一個動作與器材（或器材是這次的子集合）就直接使用，否則用 AI 建議並保存給所有人共用。
-// 只接受當天課表上的動作，避免被拿來產生任意內容。
-export async function suggestSwapAction(input: { date: string; exerciseIndex: number; equipment: string }): Promise<SwapActionResult> {
+// 只接受目前課表上的動作，避免被拿來產生任意內容。紀錄頁與課表頁共用。
+export async function suggestSwapAction(input: { day: string; exerciseIndex: number; equipment: string }): Promise<SwapActionResult> {
   const session = await getSession()
   if (!session) redirect('/login')
   const { t, locale } = await getI18n()
   const errors = t.log.swapErrors
 
-  if (!isISODate(input?.date) || !Number.isInteger(input.exerciseIndex)) return { ok: false, error: errors.failed }
+  if (!isDayKey(input?.day) || !Number.isInteger(input.exerciseIndex)) return { ok: false, error: errors.failed }
   const { plan } = await getActivePlan(session.userId)
-  const exercise = plan.days.find((d) => d.day === dayKeyOf(input.date))?.exercises[input.exerciseIndex]
+  const exercise = plan.days.find((d) => d.day === input.day)?.exercises[input.exerciseIndex]
   if (!exercise) return { ok: false, error: errors.failed }
   const equipment = parseEquipment(typeof input.equipment === 'string' ? input.equipment.slice(0, 300) : '')
 
