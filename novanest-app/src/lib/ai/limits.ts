@@ -14,7 +14,7 @@ import type { Plan } from '@/lib/user/plan'
 
 // 各方案（Free／Pro）每位使用者的次數與期間（照片與營養標示分析共用一個額度）、體態照片上限、
 // 短時間內的總次數、全站每天的總次數。管理員可以在後台「AI 用量」調整，存在 app_settings；沒有設定時使用這裡的預設值。
-export const LIMIT_GROUPS = ['food_image', 'food_name', 'plan', 'plan_translate', 'exercise_guide'] as const
+export const LIMIT_GROUPS = ['food_image', 'food_name', 'plan', 'plan_translate', 'exercise_guide', 'exercise_swap'] as const
 export type LimitGroup = (typeof LIMIT_GROUPS)[number]
 
 const GROUP_FEATURES: Record<LimitGroup, AiFeature[]> = {
@@ -23,6 +23,7 @@ const GROUP_FEATURES: Record<LimitGroup, AiFeature[]> = {
   food_image: ['food_photo', 'food_label'],
   food_name: ['food_name'],
   exercise_guide: ['exercise_guide'],
+  exercise_swap: ['exercise_swap'],
 }
 
 export function limitGroupOf(feature: AiFeature): LimitGroup {
@@ -43,6 +44,8 @@ const tierSchema = z.object({
   plan_translate: allowance(1000),
   // 動作說明：產生一次後所有人共用，只有第一個打開的人會用到次數
   exercise_guide: allowance(10000),
+  // 依手邊器材建議替代動作：同一個動作與器材查過就共用，不會再用到次數
+  exercise_swap: allowance(10000),
   // 體態照片最多幾張（不是 AI 功能，但同樣依方案限制）
   photos: count(10000),
 })
@@ -78,6 +81,7 @@ export function defaultAiLimits(): AiLimits {
         plan: { count: 1, period: 'month' },
         plan_translate: { count: 2, period: 'month' },
         exercise_guide: { count: 20, period: 'day' },
+        exercise_swap: { count: 5, period: 'day' },
         photos: 12,
       },
       pro: {
@@ -86,6 +90,7 @@ export function defaultAiLimits(): AiLimits {
         plan: { count: 10, period: 'month' },
         plan_translate: { count: 20, period: 'month' },
         exercise_guide: { count: 1000, period: 'month' },
+        exercise_swap: { count: 300, period: 'month' },
         photos: 500,
       },
     },
@@ -122,6 +127,7 @@ function parseLimits(value: unknown): AiLimits | null {
         plan: daily(legacy.data.daily.plan),
         plan_translate: daily(legacy.data.daily.plan_translate),
         exercise_guide: d.tiers.pro.exercise_guide,
+        exercise_swap: d.tiers.pro.exercise_swap,
         photos: d.tiers.pro.photos,
       },
     },
