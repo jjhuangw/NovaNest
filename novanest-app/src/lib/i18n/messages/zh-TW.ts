@@ -624,6 +624,8 @@ const zhTW = {
       unrecognized_label: '讀不到營養標示，請拍清楚一點或改用手動輸入。',
       unrecognized_name: '查不到這項食物，請換個說法或直接輸入數值。',
       nameRequired: '請先輸入食物名稱',
+      amountStale: '份量改了，但營養素沒辦法自動換算。請按「帶入營養素」重新估算，或直接修改數值。',
+      amountStaleEdit: '份量改了，但營養素沒辦法自動換算，請直接修改數值。',
       failed: 'AI 分析失敗，請稍後再試。',
       invalid: '請確認每項食物都有名稱，且數值正確。',
       future: '還不能記錄未來的飲食。',

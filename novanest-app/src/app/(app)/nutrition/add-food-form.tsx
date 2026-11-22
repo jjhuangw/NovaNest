@@ -20,7 +20,7 @@ import {
 } from '@/lib/nutrition/nutrients'
 import { checkImage, compressImage, imageProblemMessage } from '@/lib/photos/compress'
 import { ACCEPT_ATTR } from '@/lib/photos/limits'
-import { baseFrom, draftFrom, emptyDraft, hasMacros, parseNumber, toItem, withServings, withValue, type Draft } from './food-draft'
+import { draftFrom, emptyDraft, hasMacros, parseNumber, toItem, withAmount, withEstimate, withServings, withValue, type Draft } from './food-draft'
 import { inputClass, labelClass, MacroRatio, NutrientInput, PortionFields } from './food-fields'
 import { analyzeFoodAction, estimateFoodAction, saveFoodAction, searchFoodAction } from './actions'
 
@@ -122,13 +122,11 @@ export default function AddFoodForm({ date, defaultMeal }: { date: string; defau
         update(d.key, { estimatedFor: name })
         return
       }
+      // 有填份量時伺服器已依該份量估算；沒填時用估算的份量
       setDrafts((ds) =>
         ds.map((x) =>
           x.key === d.key
-            ? withServings(
-                { ...x, amount: x.amount.trim() || (result.item.amount ?? ''), base: baseFrom(result.item), estimatedFor: name, estimated: true },
-                x.servings,
-              )
+            ? withEstimate(x, result.item, { amount: x.amount.trim() || (result.item.amount ?? ''), estimatedFor: name, estimated: true })
             : x,
         ),
       )
@@ -150,12 +148,7 @@ export default function AddFoodForm({ date, defaultMeal }: { date: string; defau
     setError(null)
     setDrafts((ds) =>
       ds.map((x) =>
-        x.key === key
-          ? withServings(
-              { ...x, name: item.name, amount: item.amount ?? '', base: baseFrom(item), estimatedFor: item.name, estimated: true },
-              x.servings,
-            )
-          : x,
+        x.key === key ? withEstimate(x, item, { name: item.name, amount: item.amount ?? '', estimatedFor: item.name, estimated: true }) : x,
       ),
     )
   }
@@ -168,6 +161,15 @@ export default function AddFoodForm({ date, defaultMeal }: { date: string; defau
     setDrafts((ds) => ds.map((d) => (d.key === key ? withValue(d, nutrient, value) : d)))
   }
 
+  // 修改份量文字時依帶入時的份量換算營養素；換算不了的在離開欄位時重新估算
+  function updateAmount(key: number, amount: string) {
+    setDrafts((ds) => ds.map((d) => (d.key === key ? withAmount(d, amount) : d)))
+  }
+
+  function amountBlur(d: Draft) {
+    if (d.stale && d.name.trim()) estimate(d)
+  }
+
   function updatePortion(key: number, servings: string, gramsText: string | null = null) {
     setDrafts((ds) => ds.map((d) => (d.key === key ? withServings(d, servings, gramsText) : d)))
   }
@@ -176,6 +178,11 @@ export default function AddFoodForm({ date, defaultMeal }: { date: string; defau
     const items = drafts.map(toItem)
     if (items.some((i) => !i.name)) {
       setError(t.errors.invalid)
+      return
+    }
+    // 份量改了但營養素還是舊份量（或正在重新估算）時不存，避免存成錯的數值
+    if (estimatingKey !== null || drafts.some((d) => d.stale)) {
+      setError(t.errors.amountStale)
       return
     }
     setError(null)
@@ -294,6 +301,8 @@ export default function AddFoodForm({ date, defaultMeal }: { date: string; defau
                 onEstimate={() => estimate(d)}
                 onNameBlur={() => autoEstimate(d)}
                 onPick={(item) => pick(d.key, item)}
+                onAmount={(amount) => updateAmount(d.key, amount)}
+                onAmountBlur={() => amountBlur(d)}
                 t={t}
                 onChange={(patch) => update(d.key, patch)}
                 onValue={(k, v) => updateValue(d.key, k, v)}
@@ -355,6 +364,8 @@ function DraftEditor({
   onEstimate,
   onNameBlur,
   onPick,
+  onAmount,
+  onAmountBlur,
   t,
   onChange,
   onValue,
@@ -368,6 +379,8 @@ function DraftEditor({
   onEstimate: () => void
   onNameBlur: () => void
   onPick: (item: FoodItem) => void
+  onAmount: (amount: string) => void
+  onAmountBlur: () => void
   t: Messages['nutrition']
   onChange: (patch: Partial<Draft>) => void
   onValue: (key: NutrientKey, value: string) => void
@@ -488,7 +501,8 @@ function DraftEditor({
           <span className={labelClass}>{t.amount}</span>
           <input
             value={draft.amount}
-            onChange={(e) => onChange({ amount: e.target.value })}
+            onChange={(e) => onAmount(e.target.value)}
+            onBlur={onAmountBlur}
             maxLength={80}
             placeholder={t.amountPlaceholder}
             className={inputClass}
@@ -496,6 +510,7 @@ function DraftEditor({
         </label>
       </div>
 
+      {draft.stale && <p className="mt-2 text-xs text-accent">{t.errors.amountStale}</p>}
       {draft.estimated && draft.estimatedFor === draft.name.trim() && hasMacros(draft) && (
         <p className="mt-2 text-xs text-muted">{t.estimatedNote}</p>
       )}

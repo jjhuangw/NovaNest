@@ -6,7 +6,7 @@ import { useI18n } from '@/lib/i18n/client'
 import { EXTRAS, formatAmount, MACROS, MEALS, UNITS, type Meal, type Nutrients, type Source } from '@/lib/nutrition/nutrients'
 import { updateFoodAction } from './actions'
 import DeleteButton from './delete-button'
-import { draftFrom, parseNumber, toItem, withServings, withValue, type Draft } from './food-draft'
+import { draftFrom, parseNumber, toItem, withAmount, withServings, withValue, type Draft } from './food-draft'
 import { inputClass, labelClass, MacroRatio, NutrientInput, PortionFields } from './food-fields'
 
 export interface Entry extends Nutrients {
@@ -41,6 +41,10 @@ export default function EntryItem({ entry: e }: { entry: Entry }) {
     const item = toItem(draft)
     if (!item.name) {
       setError(t.errors.invalid)
+      return
+    }
+    if (draft.stale) {
+      setError(t.errors.amountStaleEdit)
       return
     }
     setError(null)
@@ -124,7 +128,7 @@ export default function EntryItem({ entry: e }: { entry: Entry }) {
             <span className={labelClass}>{t.amount}</span>
             <input
               value={draft.amount}
-              onChange={(ev) => setDraft({ ...draft, amount: ev.target.value, gramsText: null })}
+              onChange={(ev) => setDraft(withAmount(draft, ev.target.value))}
               maxLength={80}
               placeholder={t.amountPlaceholder}
               className={inputClass}
@@ -132,6 +136,7 @@ export default function EntryItem({ entry: e }: { entry: Entry }) {
           </label>
         </div>
 
+        {draft.stale && <p className="mt-2 text-xs text-accent">{t.errors.amountStaleEdit}</p>}
         <PortionFields draft={draft} onPortion={(servings, gramsText) => setDraft(withServings(draft, servings, gramsText))} t={t} />
 
         <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
