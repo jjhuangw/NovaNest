@@ -6,7 +6,9 @@ import { useRouter } from 'next/navigation'
 import { useI18n } from '@/lib/i18n/client'
 import type { SwapOption } from '@/lib/training/exercise-swap'
 import type { DayKey } from '@/lib/training/plan'
+import { matchCatalog } from '@/lib/training/exercise-catalog'
 import { replaceExerciseAction } from './actions'
+import ExerciseDemo from './exercise-demo'
 import { suggestSwapAction } from './log/actions'
 
 // 記住上次輸入的器材，下次（或其他動作）直接帶入。只是方便用，讀寫失敗就當作沒有
@@ -105,6 +107,8 @@ export default function SwapField(props: Props) {
   }
 
   const current = value.trim()
+  // 選了 AI 建議時用它挑的示範圖；自己輸入的用名稱比對
+  const previewImage = current ? (options?.find((o) => o.name === current)?.imageId ?? matchCatalog(current)) : null
 
   // 範例課表不能修改：只說明要先產生自己的課表
   if (props.mode === 'plan' && !props.canEdit) {
@@ -172,10 +176,13 @@ export default function SwapField(props: Props) {
                     onClick={() => choose(o.name)}
                     aria-pressed={current === o.name}
                     aria-label={t.useSwap(o.name)}
-                    className={`w-full border px-3 py-2 text-left text-sm ${current === o.name ? 'border-foreground bg-foreground text-background' : 'border-line hover:border-foreground'}`}
+                    className={`flex w-full items-start gap-3 border px-3 py-2 text-left text-sm ${current === o.name ? 'border-foreground bg-foreground text-background' : 'border-line hover:border-foreground'}`}
                   >
-                    <span className="font-semibold">{o.name}</span>
-                    <span className={`mt-0.5 block text-xs ${current === o.name ? 'opacity-80' : 'text-muted'}`}>{o.reason}</span>
+                    {o.imageId && <ExerciseDemo imageId={o.imageId} name={o.name} size="sm" />}
+                    <span className="min-w-0">
+                      <span className="font-semibold">{o.name}</span>
+                      <span className={`mt-0.5 block text-xs ${current === o.name ? 'opacity-80' : 'text-muted'}`}>{o.reason}</span>
+                    </span>
                   </button>
                 </li>
               ))}
@@ -206,6 +213,8 @@ export default function SwapField(props: Props) {
             className="mt-1 w-full border border-line bg-surface px-3 py-2 text-sm placeholder-muted/60 focus:border-foreground focus:outline-none"
           />
         </label>
+
+        {previewImage && <ExerciseDemo imageId={previewImage} name={current} size="md" />}
 
         {!isLog && (
           <button

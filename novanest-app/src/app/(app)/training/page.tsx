@@ -175,7 +175,17 @@ export default async function TrainingPage(props: PageProps<'/training'>) {
                           {text.exercise(e.name)}
                           {e.cue && <span className="mt-1 block text-xs font-normal text-foreground/80">{t.training.cue(text.cue(e.name, e.cue)!)}</span>}
                           {e.substitute && (
-                            <span className="mt-1 block text-xs font-normal text-muted">{t.training.substitute(text.substitute(e.name, e.substitute)!)}</span>
+                            <span className="mt-1 flex items-center gap-2 text-xs font-normal text-muted">
+                              {/* 替代動作有示範圖時附上縮圖（原文名稱比對，翻譯後的名稱也試一次） */}
+                              {(() => {
+                                const subImage = matchCatalog(e.substitute) ?? matchCatalog(text.substitute(e.name, e.substitute)!)
+                                return subImage ? (
+                                  // eslint-disable-next-line @next/next/no-img-element
+                                  <img src={`/exercises/${subImage}-0.webp`} alt="" width={36} height={24} loading="lazy" className="h-6 w-9 shrink-0 bg-stone object-cover" />
+                                ) : null
+                              })()}
+                              {t.training.substitute(text.substitute(e.name, e.substitute)!)}
+                            </span>
                           )}
                         </div>
                         <span className="shrink-0 pt-0.5 text-right text-sm tabular-nums">
