@@ -13,6 +13,7 @@ import { matchCatalog } from '@/lib/training/exercise-catalog'
 import { getGuides, guideKey } from '@/lib/training/exercise-guide'
 import { translatePlanAction } from './actions'
 import ExerciseGuide from './exercise-guide'
+import SwapField from './swap-field'
 import TranslateButton from './translate-button'
 
 export const instant = false
@@ -185,6 +186,15 @@ export default async function TrainingPage(props: PageProps<'/training'>) {
                       {/* 說明展開後占滿整列，只和編號對齊縮排 */}
                       <div className="pl-9 sm:pl-10">
                         <ExerciseGuide name={e.name} displayName={text.exercise(e.name)} catalogId={imageId} initialGuide={guide} />
+                        <SwapField
+                          mode="plan"
+                          canEdit={active.generated}
+                          day={current.day}
+                          exerciseIndex={i}
+                          exerciseName={e.name}
+                          exerciseLabel={text.exercise(e.name)}
+                          planSubstitute={text.substitute(e.name, e.substitute)}
+                        />
                       </div>
                     </li>
                   )

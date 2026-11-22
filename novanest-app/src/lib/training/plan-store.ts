@@ -78,3 +78,34 @@ async function latestPlanRow(userId: string, locale: Locale) {
 export async function savePlan(userId: string, plan: TrainingPlan, locale: Locale, model: string) {
   await db.insert(trainingPlans).values({ userId, plan, locale, model })
 }
+
+// 使用者在課表頁替換動作：以修改後的課表存成新版本（最新一筆即目前課表），
+// 沿用原本的語言與模型，並把已有的翻譯一起複製過去，不必重新翻譯。舊版本與過去的紀錄不變。
+export async function saveEditedPlan(input: { userId: string; fromPlanId: string; plan: TrainingPlan }) {
+  await db.transaction(async (tx) => {
+    const [from] = await tx
+      .select({ locale: trainingPlans.locale, model: trainingPlans.model })
+      .from(trainingPlans)
+      .where(and(eq(trainingPlans.id, input.fromPlanId), eq(trainingPlans.userId, input.userId)))
+    if (!from) throw new Error('Plan not found')
+    const [created] = await tx
+      .insert(trainingPlans)
+      .values({ userId: input.userId, plan: input.plan, locale: from.locale, model: from.model })
+      .returning({ id: trainingPlans.id })
+    // 翻譯資料表不存在（尚未執行 0003_plan_translations.sql）時略過；用 savepoint 避免整個交易失敗
+    try {
+      await tx.transaction(async (sp) => {
+        const translations = await sp
+          .select({ locale: planTranslations.locale, text: planTranslations.text, model: planTranslations.model })
+          .from(planTranslations)
+          .where(eq(planTranslations.planId, input.fromPlanId))
+        if (translations.length > 0) {
+          await sp.insert(planTranslations).values(translations.map((r) => ({ ...r, planId: created.id })))
+        }
+      })
+    } catch (e) {
+      const err = e as { code?: string; cause?: { code?: string } }
+      if ((err.code ?? err.cause?.code) !== '42P01') throw e
+    }
+  })
+}

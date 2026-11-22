@@ -12,6 +12,15 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.8.0',
+    date: '2026-11-22',
+    announce: false,
+    items: {
+      'zh-TW': ['課表頁也可以「換動作」：把動作永久換成其他動作（可以輸入手邊的器材請 AI 建議），組數、次數與休息時間沿用原本的設定，過去的紀錄不會改變'],
+      en: ['Swap exercises on your plan page too: replace an exercise from now on (enter your equipment for suggestions). Sets, reps and rest stay the same, and past logs don’t change'],
+    },
+  },
+  {
     version: '1.7.0',
     date: '2026-11-22',
     announce: false,
