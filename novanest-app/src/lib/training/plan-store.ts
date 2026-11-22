@@ -5,7 +5,8 @@ import { db } from '@/lib/db/client'
 import { planTranslations, trainingPlans } from '@/lib/db/schema'
 import { isLocale, type Locale } from '@/lib/i18n/config'
 import { getLocale } from '@/lib/i18n/server'
-import { mockPlan, type TrainingPlan } from './plan'
+import { normalizeExerciseName } from './exercise-catalog'
+import { mockPlan, type DayKey, type TrainingPlan } from './plan'
 import type { PlanText } from './plan-copy'
 import { trainingPlanSchema } from './plan-schema'
 import { parsePlanText } from './plan-translation'
@@ -108,4 +109,25 @@ export async function saveEditedPlan(input: { userId: string; fromPlanId: string
       if ((err.code ?? err.cause?.code) !== '42P01') throw e
     }
   })
+}
+
+// 使用者各版本課表在某一天、各位置（exercise_index）用過的動作名稱，格式為「位置|正規化名稱」。
+// 紀錄頁用來分辨紀錄裡和課表不同的名稱是「當天換動作」，還是之後在課表頁永久替換前的舊動作（後者不算換動作）。
+export async function pastPlanNames(userId: string, day: DayKey): Promise<Set<string>> {
+  const rows = await db
+    .select({ plan: trainingPlans.plan })
+    .from(trainingPlans)
+    .where(eq(trainingPlans.userId, userId))
+    .orderBy(desc(trainingPlans.createdAt))
+    .limit(50)
+  const names = new Set<string>()
+  for (const { plan } of rows) {
+    const days = (plan as { days?: { day?: unknown; exercises?: { name?: unknown }[] }[] } | null)?.days
+    const exercises = Array.isArray(days) ? days.find((d) => d?.day === day)?.exercises : undefined
+    if (!Array.isArray(exercises)) continue
+    exercises.forEach((e, i) => {
+      if (typeof e?.name === 'string') names.add(`${i}|${normalizeExerciseName(e.name)}`)
+    })
+  }
+  return names
 }

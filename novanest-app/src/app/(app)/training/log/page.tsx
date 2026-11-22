@@ -15,9 +15,10 @@ import {
 } from '@/lib/training/dates'
 import { getFirstLogDate, getLoggedDays, getSetCounts, getWorkoutLog, type LoggedSet } from '@/lib/training/logs'
 import { computeMuscleVolume } from '@/lib/training/muscles'
+import { normalizeExerciseName } from '@/lib/training/exercise-catalog'
 import { getGender } from '@/lib/user/profile'
 import { DAY_KEYS } from '@/lib/training/plan'
-import { getActivePlan } from '@/lib/training/plan-store'
+import { getActivePlan, pastPlanNames } from '@/lib/training/plan-store'
 import { planText } from '@/lib/training/plan-copy'
 import { getI18n } from '@/lib/i18n/server'
 import type { Messages } from '@/lib/i18n/messages'
@@ -44,7 +45,7 @@ export default async function TrainingLogPage(props: PageProps<'/training/log'>)
   // 所有查詢一次送出，並同時確認登入狀態
   const {
     session,
-    data: [active, logged, log, firstLogDate, weekSetCounts, gender, { locale, t }],
+    data: [active, logged, log, firstLogDate, weekSetCounts, gender, { locale, t }, formerNames],
   } = await loadForUser((userId) =>
     Promise.all([
       getActivePlan(userId),
@@ -54,6 +55,7 @@ export default async function TrainingLogPage(props: PageProps<'/training/log'>)
       getSetCounts(userId, week.from, week.to),
       getGender(userId),
       getI18n(),
+      pastPlanNames(userId, dayKeyOf(date)),
     ]),
   )
   const { plan } = active
@@ -89,8 +91,12 @@ export default async function TrainingLogPage(props: PageProps<'/training/log'>)
       : null
 
   // 當天換成其他動作時，各組記在替代動作的名稱下
-  const swappedName = (exerciseIndex: number, planned: string) =>
-    log?.sets.find((s) => s.exerciseIndex === exerciseIndex && s.exerciseName !== planned)?.exerciseName ?? ''
+  // 紀錄裡的名稱是課表在同一個位置用過的舊動作（之後在課表頁永久替換了）時，不算當天換動作，
+  // 否則替換前記錄的那幾天會把舊動作當成換動作的預設值；再次儲存時就記在目前課表的動作下
+  const swappedName = (exerciseIndex: number, planned: string) => {
+    const name = log?.sets.find((s) => s.exerciseIndex === exerciseIndex && s.exerciseName !== planned)?.exerciseName
+    return name && !formerNames.has(`${exerciseIndex}|${normalizeExerciseName(name)}`) ? name : ''
+  }
 
   const setValue = (exerciseIndex: number, setNumber: number) =>
     log?.sets.find((s) => s.exerciseIndex === exerciseIndex && s.setNumber === setNumber)
