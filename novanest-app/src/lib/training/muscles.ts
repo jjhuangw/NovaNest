@@ -16,8 +16,9 @@ export interface MuscleVolume {
   status: MuscleStatus
 }
 
-// 依日期與動作名稱統計完成的組數：date -> exerciseName -> sets
-export type SetCounts = Map<string, Map<string, number>>
+// 依日期統計各動作完成的組數。exerciseIndex 是當天課表上的第幾個動作，
+// 當天換成其他動作（名稱對不到課表）時，用它找回原本動作的肌群
+export type SetCounts = Map<string, { exerciseIndex: number; name: string; sets: number }[]>
 
 export function computeMuscleVolume(plan: TrainingPlan, week: DayCompletion[], setCounts: SetCounts): MuscleVolume[] {
   const muscleWeights = new Map(plan.days.flatMap((d) => d.exercises.map((e) => [e.name, e.muscles] as const)))
@@ -33,8 +34,9 @@ export function computeMuscleVolume(plan: TrainingPlan, week: DayCompletion[], s
         if (isDue) t.due += e.sets * weight
       }
     }
-    for (const [name, sets] of setCounts.get(day.date) ?? []) {
-      for (const [muscle, weight] of Object.entries(muscleWeights.get(name) ?? {}) as [Muscle, number][]) {
+    for (const { exerciseIndex, name, sets } of setCounts.get(day.date) ?? []) {
+      const muscles = muscleWeights.get(name) ?? exercises[exerciseIndex]?.muscles ?? {}
+      for (const [muscle, weight] of Object.entries(muscles) as [Muscle, number][]) {
         totals.get(muscle)!.completed += sets * weight
       }
     }

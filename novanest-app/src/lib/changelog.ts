@@ -12,6 +12,15 @@ export interface Release {
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.7.0',
+    date: '2026-11-22',
+    announce: true,
+    items: {
+      'zh-TW': ['訓練紀錄可以「換動作」：器材被占用或做不了時，輸入今天實際做的動作；也可以輸入手邊有的器材，請 AI 建議替代動作。只影響當天的紀錄，課表不會改變'],
+      en: ['Swap an exercise in your training log: if the equipment is taken, log what you did instead, or enter the equipment you have and get substitute suggestions. Only that day’s log changes, not your plan'],
+    },
+  },
+  {
     version: '1.6.1',
     date: '2026-11-21',
     announce: false,

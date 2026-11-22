@@ -27,6 +27,7 @@ import ExerciseMuscles from './exercise-muscles'
 import MuscleMap from './muscle-map'
 import { RestButton, RestTimerProvider } from './rest-timer'
 import StoryShare, { type StoryCard } from './story-share'
+import SwapField from './swap-field'
 
 export const instant = false
 
@@ -86,6 +87,10 @@ export default async function TrainingLogPage(props: PageProps<'/training/log'>)
           name: session.username,
         }
       : null
+
+  // 當天換成其他動作時，各組記在替代動作的名稱下
+  const swappedName = (exerciseIndex: number, planned: string) =>
+    log?.sets.find((s) => s.exerciseIndex === exerciseIndex && s.exerciseName !== planned)?.exerciseName ?? ''
 
   const setValue = (exerciseIndex: number, setNumber: number) =>
     log?.sets.find((s) => s.exerciseIndex === exerciseIndex && s.setNumber === setNumber)
@@ -219,6 +224,13 @@ export default async function TrainingLogPage(props: PageProps<'/training/log'>)
                       </div>
                       <ExerciseMuscles muscles={e.muscles} gender={gender ?? 'male'} />
                       {e.cue && <p className="mt-2 text-xs text-muted">{t.training.cue(text.cue(e.name, e.cue)!)}</p>}
+                      <SwapField
+                        date={date}
+                        exerciseIndex={i}
+                        exerciseLabel={text.exercise(e.name)}
+                        planSubstitute={text.substitute(e.name, e.substitute)}
+                        defaultValue={swappedName(i, e.name)}
+                      />
                       <div className="mt-2 grid grid-cols-[3.5rem_1fr_1fr] items-center gap-x-3 gap-y-2 text-sm">
                         <span />
                         <span className="text-xs text-muted">{t.log.weight}</span>

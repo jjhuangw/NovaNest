@@ -66,18 +66,19 @@ export async function getSetCounts(userId: string, from: string, to: string): Pr
   const rows = await db
     .select({
       date: workoutLogs.date,
+      exerciseIndex: setLogs.exerciseIndex,
       exerciseName: setLogs.exerciseName,
       sets: sql<number>`count(*)::int`,
     })
     .from(setLogs)
     .innerJoin(workoutLogs, eq(setLogs.workoutLogId, workoutLogs.id))
     .where(and(eq(workoutLogs.userId, userId), between(workoutLogs.date, from, to)))
-    .groupBy(workoutLogs.date, setLogs.exerciseName)
+    .groupBy(workoutLogs.date, setLogs.exerciseIndex, setLogs.exerciseName)
 
   const counts: SetCounts = new Map()
   for (const r of rows) {
-    if (!counts.has(r.date)) counts.set(r.date, new Map())
-    counts.get(r.date)!.set(r.exerciseName, r.sets)
+    if (!counts.has(r.date)) counts.set(r.date, [])
+    counts.get(r.date)!.push({ exerciseIndex: r.exerciseIndex, name: r.exerciseName, sets: r.sets })
   }
   return counts
 }

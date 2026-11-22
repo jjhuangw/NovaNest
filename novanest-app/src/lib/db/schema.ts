@@ -138,7 +138,7 @@ export const aiUsage = pgTable(
   {
     id: uuid('id').primaryKey().defaultRandom(),
     userId: uuid('user_id').references(() => users.id, { onDelete: 'set null' }),
-    // 'plan' | 'plan_translate' | 'food_photo' | 'food_label' | 'food_name' | 'exercise_guide'，見 lib/ai/usage.ts
+    // 'plan' | 'plan_translate' | 'food_photo' | 'food_label' | 'food_name' | 'exercise_guide' | 'exercise_swap'，見 lib/ai/usage.ts
     feature: text('feature').notNull(),
     // 實際回應的模型（可能是 fallback 後的模型）
     model: text('model').notNull(),
@@ -206,6 +206,25 @@ export const foodEstimates = pgTable(
     createdAt: timestamp('created_at').defaultNow().notNull(),
   },
   (t) => [primaryKey({ columns: [t.nameKey, t.amountKey, t.locale] })],
+).enableRLS()
+
+// 依手邊器材建議的替代動作（AI 產生、中英文一起，所有使用者共用）。exercise_key 是動作名稱正規化後的結果（同 exercise_guides），
+// equipment 是正規化、排序後的器材清單，equipment_key 是它以 | 串起來的字串（徒手為空字串）。見 lib/training/exercise-swap.ts。
+export const exerciseSwaps = pgTable(
+  'exercise_swaps',
+  {
+    exerciseKey: text('exercise_key').notNull(),
+    equipmentKey: text('equipment_key').notNull(),
+    exerciseName: text('exercise_name').notNull(),
+    equipment: jsonb('equipment').notNull(),
+    options: jsonb('options').notNull(),
+    model: text('model').notNull(),
+    // 從這裡直接取用（沒有呼叫 AI）的次數
+    hits: integer('hits').default(0).notNull(),
+    createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.exerciseKey, t.equipmentKey] })],
 ).enableRLS()
 
 export type User = typeof users.$inferSelect
